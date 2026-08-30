@@ -5424,6 +5424,16 @@
 		)
 		(uuid "97c12726-bd0b-406e-938c-bcd31d544f2a")
 	)
+	(text "I2C Pull Up Resistor\n"
+		(exclude_from_sim no)
+		(at 274.574 110.998 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "d6d95551-3962-4891-aa8b-0d95e4bff03f")
+	)
 	(text "Boot Switch\n"
 		(exclude_from_sim no)
 		(at 84.328 168.656 0)
@@ -5445,6 +5455,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "0ce64d95-4bd9-489b-bf2b-bec3433c9825")
+	)
+	(junction
+		(at 271.78 97.79)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "197fbe19-6c40-4de9-85e0-dadbeb410dcb")
 	)
 	(junction
 		(at 137.16 24.13)
@@ -6008,6 +6024,16 @@
 		)
 		(uuid "1561808a-4d58-48a2-9ab7-b19575a50bbe")
 	)
+	(polyline
+		(pts
+			(xy 264.16 88.9) (xy 284.48 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "157fa600-e163-4abc-9678-3023ff4952a7")
+	)
 	(wire
 		(pts
 			(xy 77.47 38.1) (xy 86.36 38.1)
@@ -6037,6 +6063,16 @@
 			(type default)
 		)
 		(uuid "16112021-0990-4115-b4ae-7659a25cc72e")
+	)
+	(wire
+		(pts
+			(xy 275.59 106.68) (xy 275.59 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "16c7767a-d220-4f92-a846-9e037316fd62")
 	)
 	(polyline
 		(pts
@@ -6160,6 +6196,16 @@
 	)
 	(wire
 		(pts
+			(xy 271.78 97.79) (xy 267.97 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "242bfa9f-254b-4504-8609-503b2c460483")
+	)
+	(wire
+		(pts
 			(xy 81.28 120.65) (xy 83.82 120.65)
 		)
 		(stroke
@@ -6167,6 +6213,16 @@
 			(type default)
 		)
 		(uuid "24b74d1d-f271-45cd-a9bd-8567e431e741")
+	)
+	(polyline
+		(pts
+			(xy 284.48 111.76) (xy 264.16 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "24ca6904-c1da-45de-b574-1f70008967c4")
 	)
 	(wire
 		(pts
@@ -6300,6 +6356,16 @@
 	)
 	(wire
 		(pts
+			(xy 267.97 106.68) (xy 267.97 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3820f1c7-91ae-4461-844b-2588723c6b86")
+	)
+	(wire
+		(pts
 			(xy 50.8 41.91) (xy 50.8 43.18)
 		)
 		(stroke
@@ -6327,6 +6393,16 @@
 			(type default)
 		)
 		(uuid "38eded22-105e-4ef0-86ca-63ce445c1d97")
+	)
+	(polyline
+		(pts
+			(xy 264.16 88.9) (xy 264.16 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3912e9f4-30f6-4d15-a05a-0e6b2fa08698")
 	)
 	(wire
 		(pts
@@ -6418,6 +6494,16 @@
 		)
 		(uuid "41b48950-0f96-4a26-8f18-e09e79a1a6f6")
 	)
+	(polyline
+		(pts
+			(xy 284.48 88.9) (xy 284.48 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4587b486-00b9-445c-a563-2fa5c1621144")
+	)
 	(wire
 		(pts
 			(xy 30.48 132.08) (xy 30.48 133.35)
@@ -6477,6 +6563,16 @@
 			(type default)
 		)
 		(uuid "4a73b9d9-e6d2-43da-8300-e92246baeae3")
+	)
+	(wire
+		(pts
+			(xy 271.78 95.25) (xy 271.78 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4a790c56-7979-418c-b23c-e954b4384e95")
 	)
 	(wire
 		(pts
@@ -6670,6 +6766,16 @@
 	)
 	(wire
 		(pts
+			(xy 267.97 97.79) (xy 267.97 99.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "607d39c3-ada8-46dd-924d-c91b983ed3ae")
+	)
+	(wire
+		(pts
 			(xy 179.07 24.13) (xy 185.42 24.13)
 		)
 		(stroke
@@ -6787,6 +6893,16 @@
 			(type default)
 		)
 		(uuid "6d5e23dd-231b-4e62-89a2-a913c0998359")
+	)
+	(wire
+		(pts
+			(xy 275.59 97.79) (xy 275.59 99.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6e7e6b99-1af3-4bda-a5c5-e4d28131bc5c")
 	)
 	(wire
 		(pts
@@ -7760,6 +7876,16 @@
 	)
 	(wire
 		(pts
+			(xy 271.78 97.79) (xy 275.59 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e6857303-1082-41c0-9f2a-6c8f6eb79d4a")
+	)
+	(wire
+		(pts
 			(xy 63.5 53.34) (xy 63.5 58.42)
 		)
 		(stroke
@@ -8028,6 +8154,16 @@
 		)
 		(uuid "0e72ec1b-733d-4089-b3e8-6726d7b984b1")
 	)
+	(label "SDA"
+		(at 267.97 109.22 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "3bb3bc25-a056-49df-9527-f67e28fee721")
+	)
 	(label "D+"
 		(at 86.36 40.64 0)
 		(effects
@@ -8207,6 +8343,16 @@
 			(justify left bottom)
 		)
 		(uuid "b9ece722-3570-4cf5-bf2f-58e053a159d7")
+	)
+	(label "SCL"
+		(at 275.59 109.22 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "cce7f1dd-34d8-48b2-a981-1cdd7ea47627")
 	)
 	(label "SWCLK"
 		(at 124.46 100.33 0)
@@ -9018,6 +9164,88 @@
 			(project "schmatic"
 				(path "/73d1229a-5b2b-4315-be30-07d9aad35cfd"
 					(reference "#PWR028")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 275.59 102.87 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2169d55b-0d85-4dcb-b4b3-f501d31ffddb")
+		(property "Reference" "R5"
+			(at 278.13 101.5999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "R"
+			(at 278.13 104.1399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
+			(at 273.812 102.87 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 275.59 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 275.59 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ebb9a30d-f703-4e29-9cd8-3c5b640ecaac")
+		)
+		(pin "2"
+			(uuid "734e7108-7a41-4d8f-9d65-42e9ed7c1b29")
+		)
+		(instances
+			(project "schmatic"
+				(path "/73d1229a-5b2b-4315-be30-07d9aad35cfd"
+					(reference "R5")
 					(unit 1)
 				)
 			)
@@ -10557,6 +10785,88 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 267.97 102.87 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "61d0d207-84df-4fc3-9b7f-b951aa1ca526")
+		(property "Reference" "R4"
+			(at 270.51 101.5999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "R"
+			(at 270.51 104.1399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
+			(at 266.192 102.87 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 267.97 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 267.97 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "cb03a6f2-3e17-417b-b6fa-6f3ff3b0a014")
+		)
+		(pin "2"
+			(uuid "bb6f0a3e-da5d-494b-988d-f6378d3f8542")
+		)
+		(instances
+			(project "schmatic"
+				(path "/73d1229a-5b2b-4315-be30-07d9aad35cfd"
+					(reference "R4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C")
 		(at 110.49 80.01 0)
 		(unit 1)
@@ -11056,7 +11366,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Sensor_Motion:InvenSense_QFN-24_3x3mm_P0.4mm"
+		(property "Footprint" "Sensor_Motion:InvenSense_QFN-24_4x4mm_P0.5mm_NoMask"
 			(at 248.92 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -11573,7 +11883,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12"
+		(property "Footprint" "Connector_USB:USB_C_Receptacle_Molex_105450-0101"
 			(at 33.02 48.26 0)
 			(hide yes)
 			(show_name no)
@@ -12521,7 +12831,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Horizontal"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical"
 			(at 69.85 185.42 0)
 			(hide yes)
 			(show_name no)
@@ -12810,6 +13120,84 @@
 			(project "schmatic"
 				(path "/73d1229a-5b2b-4315-be30-07d9aad35cfd"
 					(reference "#PWR015")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3VP")
+		(at 271.78 95.25 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c9badbe2-6d2d-42cf-b8ce-4b2036d59787")
+		(property "Reference" "#PWR031"
+			(at 275.59 96.52 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3.3VP"
+			(at 271.78 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 271.78 95.25 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 271.78 95.25 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3VP\""
+			(at 271.78 95.25 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "e30a287b-ad30-4b3d-a723-2a356876d4cc")
+		)
+		(instances
+			(project "schmatic"
+				(path "/73d1229a-5b2b-4315-be30-07d9aad35cfd"
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
@@ -13922,7 +14310,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm"
+		(property "Footprint" "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm"
 			(at 30.48 151.13 0)
 			(hide yes)
 			(show_name no)
