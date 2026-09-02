@@ -23,11 +23,13 @@ static std::vector<double> normalize(const std::vector<double>& v) {
 
 int main() {
     // ============================================================
-    // Configuration
+    // Configuration - CG/CP from OpenRocket CSV (cm from tip)
+    // At t=0: CG = 20.646563 cm, CP = NaN (pre-launch)
+    // At t=1.86s (burnout): CG = 18.8066 cm, CP = 25.09 cm
     // ============================================================
     RocketParams params;
-    params.cp_location = 20.0;
-    params.cg_location = 64.528053;
+    params.cp_location = 23.0;   // Average CP location (cm from tip)
+    params.cg_location = 20.0;   // Average CG location (cm from tip) 
     params.I_xx = 7.972923e-4;
     params.I_yy = 9.682337e-6;
     params.I_zz = 9.682337e-6;
@@ -41,25 +43,36 @@ int main() {
     config.dt = 0.01;
 
     // ============================================================
-    // Load flight data (thrust, drag, normal coefficients)
+    // Load REAL flight data from OpenRocket CSV
     // ============================================================
-    int n_points = static_cast<int>(config.sim_duration / config.dt) + 1;
-    auto thrust_data   = generateThrustProfile(n_points, config.dt);
-    auto drag_coeffs   = generateDragCoeffs(n_points, 0.867734);
-    auto normal_coeffs = generateNormalCoeffs(n_points, 0.0);
+    std::cout << "Loading flight data from OpenRocket CSV...\n";
+    FlightData flight_data = loadFlightData(
+        "/media/jayesh/Acer/Users/scien/Rocket/data/openrocket.csv", 
+        config.dt
+    );
+    
+    if (flight_data.time.empty()) {
+        std::cerr << "ERROR: Failed to load flight data!\n";
+        return 1;
+    }
+    
+    std::cout << "Loaded " << flight_data.time.size() << " data points\n";
+    std::cout << "Dry mass: " << flight_data.dry_mass << " g\n";
+    std::cout << "Initial mass: " << flight_data.mass.front() << " g\n";
+    std::cout << "Time range: " << flight_data.time.front() << " - " << flight_data.time.back() << " s\n";
 
     // ============================================================
-    // Run simulation
+    // Run simulation with REAL data
     // ============================================================
     RocketKinematics sim(params, config);
 
-    std::cout << "Rocket Simulation (3DOF) with Ground Termination\n";
+    std::cout << "\nRocket Simulation (3DOF) with Ground Termination\n";
     std::cout << "==================================================\n";
     std::cout << "Config: launch_height=" << config.launch_height
               << "m, init_tilt=" << config.init_tilt
               << "deg, dt=" << config.dt << "s\n";
 
-    auto states = sim.simulate(config.sim_duration, thrust_data, drag_coeffs, normal_coeffs);
+    auto states = sim.simulate(config.sim_duration, flight_data);
 
     // ============================================================
     // Extract time series for output and plotting
@@ -77,12 +90,16 @@ int main() {
         pitch_vec.push_back(states[i].orientation(1) * 180.0 / M_PI);
     }
 
-    // Compute acceleration from velocity derivative
-    std::vector<double> accel_vec(states.size(), 0.0);
-    for (size_t i = 1; i < states.size(); ++i) {
-        accel_vec[i] = (velocity_vec[i] - velocity_vec[i-1]) / config.dt;
+    // Angular velocity (pitch rate) and angular acceleration
+    std::vector<double> ang_vel_vec(states.size(), 0.0);
+    std::vector<double> ang_accel_vec(states.size(), 0.0);
+    for (size_t i = 0; i < states.size(); ++i) {
+        ang_vel_vec[i] = states[i].angular_vel(1) * 180.0 / M_PI; // deg/s
     }
-    accel_vec[0] = accel_vec[1];
+    for (size_t i = 1; i < states.size(); ++i) {
+        ang_accel_vec[i] = (ang_vel_vec[i] - ang_vel_vec[i-1]) / config.dt; // deg/s^2
+    }
+    ang_accel_vec[0] = ang_accel_vec[1];
 
     // Find key events
     const double t_burnout = 1.86;
@@ -99,10 +116,11 @@ int main() {
     // Save CSV output
     // ============================================================
     std::ofstream csv("rocket_trajectory.csv");
-    csv << "time,height,velocity,pitch\n";
+    csv << "time,height,velocity,pitch,ang_vel,ang_accel\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(6);
-        csv << time_vec[i] << "," << height_vec[i] << "," << velocity_vec[i] << "," << pitch_vec[i] << "\n";
+        csv << time_vec[i] << "," << height_vec[i] << "," << velocity_vec[i] << "," 
+            << pitch_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << "\n";
     }
     csv.close();
 
@@ -110,7 +128,6 @@ int main() {
     // Generate PNG plot via Python/matplotlib
     // ============================================================
     std::cout << "\nGenerating plot via Python/matplotlib...\n";
-    // Change to project root so script finds CSV and writes PNG there
     const char* project_root = "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp";
     if (chdir(project_root) == 0) {
         int result = system("python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_trajectory.png");
@@ -126,11 +143,12 @@ int main() {
     // ============================================================
     // Console summary
     // ============================================================
-    std::cout << "\nTime(s)\tHeight(m)\tVelocity(m/s)\tPitch(deg)\n";
+    std::cout << "\nTime(s)\tHeight(m)\tVelocity(m/s)\tPitch(deg)\tAngVel(deg/s)\tAngAccel(deg/s^2)\n";
     for (size_t i = 0; i < states.size(); ++i) {
         std::cout << std::fixed << std::setprecision(4)
                   << time_vec[i] << "\t" << height_vec[i] << "\t"
-                  << velocity_vec[i] << "\t" << pitch_vec[i] << "\n";
+                  << velocity_vec[i] << "\t" << pitch_vec[i] << "\t"
+                  << ang_vel_vec[i] << "\t" << ang_accel_vec[i] << "\n";
     }
 
     std::cout << "\nSimulation complete.\n";
