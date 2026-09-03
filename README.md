@@ -16,3 +16,5 @@ idk man, i havent even achivied phase 1
 
 <img src="./artifacts/PCB_Sch.png">
 <img src="./artifacts/PCB_3D.png">
+
+<script src="https://embed.github.com/view/3d/"YYorha-7"/Rocket/main/artifacts/schmatic.stl"></script>
