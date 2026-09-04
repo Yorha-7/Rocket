@@ -20,7 +20,17 @@ def plot_trajectory(csv_path, output_path):
     if has_angular:
         ang_vel = df['ang_vel'].values
         ang_accel = df['ang_accel'].values
-    
+
+    # Force (world-frame) and pitch-torque breakdown, if this CSV has them
+    has_forces = {'fx', 'fy', 'fz'}.issubset(df.columns)
+    if has_forces:
+        fx, fy, fz = df['fx'].values, df['fy'].values, df['fz'].values
+    has_torques = {'torque_gravity', 'torque_aero', 'torque_damping'}.issubset(df.columns)
+    if has_torques:
+        torque_gravity = df['torque_gravity'].values
+        torque_aero = df['torque_aero'].values
+        torque_damping = df['torque_damping'].values
+
     # Trim data at impact: find first zero-height after apogee
     apogee_idx = np.argmax(h)
     impact_candidates = np.where(h[apogee_idx:] <= 1e-6)[0]
@@ -33,10 +43,26 @@ def plot_trajectory(csv_path, output_path):
         if has_angular:
             ang_vel = ang_vel[:impact_idx + 1]
             ang_accel = ang_accel[:impact_idx + 1]
+        if has_forces:
+            fx, fy, fz = fx[:impact_idx + 1], fy[:impact_idx + 1], fz[:impact_idx + 1]
+        if has_torques:
+            torque_gravity = torque_gravity[:impact_idx + 1]
+            torque_aero = torque_aero[:impact_idx + 1]
+            torque_damping = torque_damping[:impact_idx + 1]
     
     dt = t[1] - t[0]
-    accel = np.gradient(v, dt)
-    
+
+    # The final sample is the impact frame: ground termination snaps
+    # velocity/angular velocity to zero there instantaneously. That's a
+    # real "the rocket stopped" state, but differentiating across it
+    # produces a fake, huge acceleration spike -- drop that one sample
+    # before computing/plotting either acceleration series.
+    accel_t = t[:-1]
+    accel = np.gradient(v[:-1], dt)
+    if has_angular:
+        ang_accel_t = t[:-1]
+        ang_accel = ang_accel[:-1]
+
     t_burnout = 1.86
     t_apogee = t[np.argmax(h)]
     h_apogee = np.max(h)
@@ -65,7 +91,7 @@ def plot_trajectory(csv_path, output_path):
     
     # 3. Acceleration vs Time
     ax = axes[1, 0]
-    ax.plot(t, accel, 'r-', lw=1, label='Accel', markevery=100)
+    ax.plot(accel_t, accel, 'r-', lw=1, label='Accel', markevery=100)
     ax.axvline(t_burnout, color='magenta', ls='--')
     ax.set(xlabel='Time (s)', ylabel='Accel (m/s^2)', title='Acceleration vs Time')
     ax.grid(alpha=0.3)
@@ -92,7 +118,7 @@ def plot_trajectory(csv_path, output_path):
     # 7. Angular Acceleration vs Time
     ax = axes[2, 1]
     if has_angular:
-        ax.plot(t, ang_accel, 'y-', lw=1, label='Ang Accel', markevery=100)
+        ax.plot(ang_accel_t, ang_accel, 'y-', lw=1, label='Ang Accel', markevery=100)
         ax.set(xlabel='Time (s)', ylabel='Ang Accel (deg/s^2)', title='Angular Acceleration vs Time')
         ax.grid(alpha=0.3)
         ax.legend(fontsize=8)
@@ -100,23 +126,33 @@ def plot_trajectory(csv_path, output_path):
         ax.text(0.5, 0.5, 'No angular data', ha='center', va='center', transform=ax.transAxes)
         ax.set(title='Angular Acceleration vs Time')
     
-    # 5. Combined Overview (normalized)
+    # 5. Forces vs Time (net world-frame force, per axis)
     ax = axes[3, 0]
-    for data, label, color in [
-        ((h - h.min()) / (h.max() - h.min()), 'Height', 'b'),
-        ((v - v.min()) / (v.max() - v.min()), 'Velocity', 'g'),
-        ((p - p.min()) / (p.max() - p.min()), 'Pitch', 'm'),
-        ((ang_vel - ang_vel.min()) / (ang_vel.max() - ang_vel.min()) if has_angular else np.zeros_like(h), 'Ang Vel', 'c'),
-    ]:
-        ax.plot(t, data, f'{color}-', lw=1, label=label, markevery=100)
-    ax.set(xlabel='Time (s)', ylabel='Normalized', title='Overview (Normalized)')
-    ax.grid(alpha=0.3)
-    ax.legend(fontsize=8)
-    
-    # 7. Torque components (if we can compute)
+    if has_forces:
+        ax.plot(t, fx, 'r-', lw=1, label='Fx (North)')
+        ax.plot(t, fy, 'g-', lw=1, label='Fy (East)')
+        ax.plot(t, fz, 'b-', lw=1, label='Fz (Up)')
+        ax.axvline(t_burnout, color='magenta', ls='--')
+        ax.set(xlabel='Time (s)', ylabel='Force (N)', title='Forces vs Time')
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=8)
+    else:
+        ax.text(0.5, 0.5, 'No force data', ha='center', va='center', transform=ax.transAxes)
+        ax.set(title='Forces vs Time')
+
+    # 6. Torque Analysis: the three components that add up to pitch torque
     ax = axes[3, 1]
-    ax.text(0.5, 0.5, 'Reserved for torque analysis', ha='center', va='center', transform=ax.transAxes)
-    ax.set(title='Torque Analysis')
+    if has_torques:
+        ax.plot(t, torque_gravity, 'r-', lw=1, label='Gravity')
+        ax.plot(t, torque_aero, 'g-', lw=1, label='Aerodynamic')
+        ax.plot(t, torque_damping, 'b-', lw=1, label='Damping')
+        ax.axvline(t_burnout, color='magenta', ls='--')
+        ax.set(xlabel='Time (s)', ylabel='Torque (N*m)', title='Torque Analysis')
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=8)
+    else:
+        ax.text(0.5, 0.5, 'No torque data', ha='center', va='center', transform=ax.transAxes)
+        ax.set(title='Torque Analysis')
     
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"Saved plot to {output_path}")

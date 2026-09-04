@@ -1,72 +1,81 @@
 #include "rocket_kinematics.hpp"
-#include "csv_loader.hpp"
+#include "ork_loader.hpp"
+#include "aerodynamics.hpp"
+#include "mass_properties_model.hpp"
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <algorithm>
 #include <iomanip>
 #include <cstdlib>
 #include <unistd.h>
 
-// Helper: normalize vector to [0, 1] range
-static std::vector<double> normalize(const std::vector<double>& v) {
-    if (v.empty()) return {};
-    double vmin = *std::min_element(v.begin(), v.end());
-    double vmax = *std::max_element(v.begin(), v.end());
-    if (vmax == vmin) return std::vector<double>(v.size(), 0.5);
-    std::vector<double> out(v.size());
-    for (size_t i = 0; i < v.size(); ++i) {
-        out[i] = (v[i] - vmin) / (vmax - vmin);
-    }
-    return out;
-}
-
 int main() {
     // ============================================================
-    // Configuration - CG/CP from OpenRocket CSV (cm from tip)
-    // At t=0: CG = 20.646563 cm, CP = NaN (pre-launch)
-    // At t=1.86s (burnout): CG = 18.8066 cm, CP = 25.09 cm
+    // Load the rocket's geometry, launch conditions, and full flight
+    // history (thrust/mass/drag/CP/CG/inertia over time) straight from
+    // its OpenRocket design file. No parameters are hand-copied here.
     // ============================================================
-    RocketParams params;
-    params.cp_location = 23.0;   // Average CP location (cm from tip)
-    params.cg_location = 20.0;   // Average CG location (cm from tip) 
-    params.I_xx = 7.972923e-4;
-    params.I_yy = 9.682337e-6;
-    params.I_zz = 9.682337e-6;
-    params.thrust_duration = 1.86;
-    params.max_thrust = 4.448;
+    const std::string ork_path = "/media/jayesh/Acer/Users/scien/Rocket/artifacts/rocket.ork";
 
     SimulationConfig config;
-    config.launch_height = 0.0;
-    config.init_tilt = 2.0;
-    config.sim_duration = 93.511;
-    config.dt = 0.01;
+    config.dt = 0.01;            // our integrator's step size, not part of the rocket's design
+    config.sim_duration = 120.0; // upper bound; the sim stops at ground contact regardless
+
+    std::cout << "Loading rocket design and flight data from " << ork_path << "...\n";
+    OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
+
+    config.launch_height = rocket.launch_conditions.launch_height;
+    config.init_tilt = rocket.launch_conditions.init_tilt;
+
+    // Every simulation embedded in this .ork launches from a dead-vertical
+    // rod (launchrodangle = 0), so with no perturbation the pitch model
+    // never has anything to restore from. Override with a small nonzero
+    // tilt so the pitch dynamics (gravity/aero/damping torque) actually
+    // show something, instead of leaving it real but silent.
+    const double INIT_TILT_OVERRIDE_DEG = 3.0;
+    config.init_tilt = INIT_TILT_OVERRIDE_DEG;
+
+    const RocketParams& params = rocket.params;
+    const FlightData& flight_data = rocket.flight_data;
+
+    std::cout << "Nose: " << params.nose_length << " m, shape code " << params.nose_shape << "\n";
+    std::cout << "Body: " << params.body_length << " m long, " << params.body_diameter << " m diameter\n";
+    std::cout << "Fins: " << params.fin_count << " x (root " << params.fin_root_chord
+              << " m, tip " << params.fin_tip_chord << " m, span " << params.fin_span << " m)\n";
+    std::cout << "Reference area: " << params.reference_area << " m^2\n";
+    std::cout << "Loaded " << flight_data.time.size() << " flight-data points (thrust/mass)\n";
+    std::cout << "Total liftoff mass (from .ork motor data): " << flight_data.mass.front() << " g\n";
 
     // ============================================================
-    // Load REAL flight data from OpenRocket CSV
+    // Sanity-check our own computed coefficients/mass-properties (not
+    // read from the .ork -- these come from AerodynamicsModel and
+    // VehicleMassModel, built from the vehicle's own geometry).
     // ============================================================
-    std::cout << "Loading flight data from OpenRocket CSV...\n";
-    FlightData flight_data = loadFlightData(
-        "/media/jayesh/Acer/Users/scien/Rocket/data/openrocket.csv", 
-        config.dt
-    );
-    
-    if (flight_data.time.empty()) {
-        std::cerr << "ERROR: Failed to load flight data!\n";
-        return 1;
-    }
-    
-    std::cout << "Loaded " << flight_data.time.size() << " data points\n";
-    std::cout << "Dry mass: " << flight_data.dry_mass << " g\n";
-    std::cout << "Initial mass: " << flight_data.mass.front() << " g\n";
-    std::cout << "Time range: " << flight_data.time.front() << " - " << flight_data.time.back() << " s\n";
+    AerodynamicsModel aero(params);
+    VehicleMassModel mass_model(rocket.mass_components, params.body_diameter, params.body_length);
+
+    double cp_cm = aero.computeCenterOfPressure();
+    MassProperties dry_mp = mass_model.computeAt(mass_model.dryMassKg());
+    std::cout << "Computed dry structure mass: " << mass_model.dryMassKg() * 1000.0 << " g, "
+              << "dry CG: " << mass_model.dryCgCm() << " cm from nose tip\n";
+    std::cout << "Computed CP (Barrowman): " << cp_cm << " cm from nose tip\n";
+    std::cout << "Computed dry I_yy: " << dry_mp.I_yy << " kg*m^2\n";
+
+    FlightConditions sample_fc{};
+    sample_fc.altitude = 100.0;
+    sample_fc.velocity = 50.0;
+    sample_fc.mach = sample_fc.velocity / aero.getSpeedOfSound(sample_fc.altitude);
+    sample_fc.alpha = 0.05;  // ~3 deg, representative mid-flight angle of attack
+    AerodynamicCoefficients sample_coeffs = aero.computeCoefficients(sample_fc);
+    std::cout << "Computed Cd @ 50 m/s, 100 m altitude: " << sample_coeffs.Cd
+              << " (Cn_alpha=" << sample_coeffs.Cn_alpha << "/rad)\n";
 
     // ============================================================
-    // Run simulation with REAL data
+    // Run the simulation
     // ============================================================
-    RocketKinematics sim(params, config);
+    RocketKinematics sim(params, config, rocket.mass_components);
 
-    std::cout << "\nRocket Simulation (3DOF) with Ground Termination\n";
+    std::cout << "\nRocket Simulation (3DOF translation + pitch) with Ground Termination\n";
     std::cout << "==================================================\n";
     std::cout << "Config: launch_height=" << config.launch_height
               << "m, init_tilt=" << config.init_tilt
@@ -101,8 +110,7 @@ int main() {
     }
     ang_accel_vec[0] = ang_accel_vec[1];
 
-    // Find key events
-    const double t_burnout = 1.86;
+    // Find apogee
     double t_apogee = 0.0, h_apogee = 0.0;
     for (size_t i = 0; i < states.size(); ++i) {
         if (states[i].position(2) > h_apogee) {
@@ -110,17 +118,39 @@ int main() {
             t_apogee = i * config.dt;
         }
     }
-    double t_impact = time_vec.back();
+
+    // Net world-frame force and the pitch-torque breakdown at each logged
+    // state -- not part of the integration itself, just recomputed from
+    // the same physics for the Forces/Torque Analysis plots.
+    std::vector<double> fx_vec(states.size(), 0.0), fy_vec(states.size(), 0.0), fz_vec(states.size(), 0.0);
+    std::vector<double> torque_gravity_vec(states.size(), 0.0);
+    std::vector<double> torque_aero_vec(states.size(), 0.0);
+    std::vector<double> torque_damping_vec(states.size(), 0.0);
+    for (size_t i = 0; i < states.size(); ++i) {
+        double thrust_i = (i < flight_data.thrust.size()) ? flight_data.thrust[i] : 0.0;
+        Eigen::Vector3d force = sim.computeNetForce(states[i], thrust_i);
+        fx_vec[i] = force(0);
+        fy_vec[i] = force(1);
+        fz_vec[i] = force(2);
+
+        PitchTorques torques = sim.computePitchTorques(states[i]);
+        torque_gravity_vec[i] = torques.gravity;
+        torque_aero_vec[i] = torques.aerodynamic;
+        torque_damping_vec[i] = torques.damping;
+    }
 
     // ============================================================
     // Save CSV output
     // ============================================================
     std::ofstream csv("rocket_trajectory.csv");
-    csv << "time,height,velocity,pitch,ang_vel,ang_accel\n";
+    csv << "time,height,velocity,pitch,ang_vel,ang_accel,"
+        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(6);
-        csv << time_vec[i] << "," << height_vec[i] << "," << velocity_vec[i] << "," 
-            << pitch_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << "\n";
+        csv << time_vec[i] << "," << height_vec[i] << "," << velocity_vec[i] << ","
+            << pitch_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
+            << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << ","
+            << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << "\n";
     }
     csv.close();
 
@@ -143,15 +173,8 @@ int main() {
     // ============================================================
     // Console summary
     // ============================================================
-    std::cout << "\nTime(s)\tHeight(m)\tVelocity(m/s)\tPitch(deg)\tAngVel(deg/s)\tAngAccel(deg/s^2)\n";
-    for (size_t i = 0; i < states.size(); ++i) {
-        std::cout << std::fixed << std::setprecision(4)
-                  << time_vec[i] << "\t" << height_vec[i] << "\t"
-                  << velocity_vec[i] << "\t" << pitch_vec[i] << "\t"
-                  << ang_vel_vec[i] << "\t" << ang_accel_vec[i] << "\n";
-    }
-
-    std::cout << "\nSimulation complete.\n";
+    std::cout << "\nApogee: " << h_apogee << " m at t=" << t_apogee << " s\n";
+    std::cout << "Simulation complete.\n";
     std::cout << "Results: rocket_trajectory.csv, rocket_trajectory.png\n";
     std::cout << "Ground termination: stops when z < 0\n";
 
