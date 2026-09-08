@@ -9,10 +9,17 @@
 // (atmosphere model + Reynolds/skin-friction helpers), both methods of
 // this one class.
 class AerodynamicsModel {
-public:
+public:  // public (usable from outside this class -- this is the class's interface)
+
+    // explicit (stops the compiler from silently turning a RocketParams into
+    // an AerodynamicsModel where you didn't ask for it) constructor. params
+    // is a const reference (an alias to the caller's object, not a copy --
+    // faster, but the caller's RocketParams must stay alive as long as this does).
     explicit AerodynamicsModel(const RocketParams& params);
 
     // Main entry point: every drag/normal-force coefficient at one flight condition.
+    // Trailing "const" (after the parentheses) promises this method won't
+    // modify the object it's called on.
     AerodynamicCoefficients computeCoefficients(const FlightConditions& fc) const;
 
     // Barrowman center of pressure, cm from the nose tip. Geometry-only in
@@ -25,8 +32,8 @@ public:
     double getDensity(double altitude) const;
     double getSpeedOfSound(double altitude) const;
 
-private:
-    const RocketParams& params_;
+private:  // private (only reachable from inside this class -- implementation details, hidden from callers)
+    const RocketParams& params_;  // reference member (stored alias, not a copy)
 
     // ---- Body ----
     double computeBodyCd(const FlightConditions& fc) const;
@@ -60,7 +67,9 @@ private:
     double computeSkinFrictionCf(double Re, double roughness, double length) const;
     double computeTransitionReynolds(double roughness, double length) const;
 
-    // Standard atmosphere constants
+    // Standard atmosphere constants.
+    // static (one shared value for the whole class, not one per object)
+    // constexpr (fixed number baked in at compile time, not computed at runtime).
     static constexpr double R_GAS = 287.058;  // J/(kg*K)
     static constexpr double G0 = 9.80665;
     static constexpr double T0 = 288.15;

@@ -7,6 +7,9 @@
 // gravity sits, measured from the nose tip. This is the raw material this
 // codebase uses to compute its own dry mass/CG/inertia, instead of reading
 // OpenRocket's already-solved values.
+//
+// struct = fields public by default, no getters/setters needed -- just a
+// plain data bundle, no behavior to hide.
 struct MassComponent {
     std::string name;
     double mass_kg;
