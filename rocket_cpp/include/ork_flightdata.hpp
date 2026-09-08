@@ -11,6 +11,9 @@
 // An .ork file can hold several embedded simulations, one per motor. If
 // motor_configid is left empty, the motor configuration marked
 // default="true" in the design is used.
+//
+// motor_configid = "" is a default argument -- callers may omit it
+// entirely (parseOrkFlightData(xml, dt)) and this value is used instead.
 FlightData parseOrkFlightData(const std::string& xml, double dt,
                               const std::string& motor_configid = "");
 

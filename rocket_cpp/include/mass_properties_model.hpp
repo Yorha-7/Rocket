@@ -12,6 +12,9 @@
 // to get mass properties at any instant.
 class VehicleMassModel {
 public:
+    // Constructor takes 3 arguments, so it's never a candidate for the
+    // silent single-argument conversion "explicit" guards against --
+    // no explicit needed here.
     VehicleMassModel(const std::vector<MassComponent>& components,
                      double body_diameter_m, double body_length_m);
 
@@ -20,10 +23,14 @@ public:
     // AerodynamicsModel's job, not this class's.
     MassProperties computeAt(double total_mass_kg) const;
 
+    // Getters (read-only access to a private value). Written directly in
+    // the header like this, they're implicitly inline -- the compiler
+    // substitutes the one-line body at each call site instead of a real
+    // function call, since it's cheap enough not to need a .cpp definition.
     double dryMassKg() const { return dry_mass_kg_; }
     double dryCgCm() const { return dry_cg_cm_; }
 
-private:
+private:  // hidden from outside code -- can only change via the constructor above
     double dry_mass_kg_;
     double dry_cg_cm_;
     double dry_I_yy_;        // about dry_cg_cm_

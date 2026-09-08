@@ -2,19 +2,27 @@
 """Plot rocket trajectory from CSV using matplotlib."""
 
 import sys
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 def plot_trajectory(csv_path, output_path):
-    """Generate 7-subplot trajectory figure from CSV data."""
+    """Generate the 7-subplot flight-analysis figure (output_path, e.g.
+    rocket_analysis.png) plus the X/Y/Z-vs-time trajectory figure, saved
+    as rocket_trajectory.png next to it."""
     df = pd.read_csv(csv_path)
     t = df['time'].values
     h = df['height'].values
     v = df['velocity'].values
     p = df['pitch'].values
-    
+
+    has_xy = {'x', 'y'}.issubset(df.columns)
+    if has_xy:
+        x = df['x'].values
+        y = df['y'].values
+
     # Load angular data if available
     has_angular = 'ang_vel' in df.columns and 'ang_accel' in df.columns
     if has_angular:
@@ -40,6 +48,9 @@ def plot_trajectory(csv_path, output_path):
         h = h[:impact_idx + 1]
         v = v[:impact_idx + 1]
         p = p[:impact_idx + 1]
+        if has_xy:
+            x = x[:impact_idx + 1]
+            y = y[:impact_idx + 1]
         if has_angular:
             ang_vel = ang_vel[:impact_idx + 1]
             ang_accel = ang_accel[:impact_idx + 1]
@@ -70,7 +81,7 @@ def plot_trajectory(csv_path, output_path):
     
     # 4x2 grid for 7 plots
     fig, axes = plt.subplots(4, 2, figsize=(12, 10), constrained_layout=True)
-    fig.suptitle('Rocket Trajectory (3DOF Simulation)', fontsize=14)
+    fig.suptitle('Rocket Flight Analysis (3DOF Simulation)', fontsize=14)
     
     # 1. Height vs Time
     ax = axes[0, 0]
@@ -157,11 +168,35 @@ def plot_trajectory(csv_path, output_path):
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"Saved plot to {output_path}")
 
+    # Second figure: x, y, z (height) position components vs time, one
+    # subplot each -- this is the "where is it pointing horizontally"
+    # counterpart to the height-only plot above.
+    if has_xy:
+        out_dir = os.path.dirname(output_path)
+        trajectory_path = os.path.join(out_dir, 'rocket_trajectory.png') if out_dir else 'rocket_trajectory.png'
+        fig2, axes2 = plt.subplots(3, 1, figsize=(8, 9), constrained_layout=True, sharex=True)
+        fig2.suptitle('Rocket Position Components vs Time', fontsize=14)
+
+        axes2[0].plot(t, x, 'r-', lw=1)
+        axes2[0].set(ylabel='X (m)', title='X (North) vs Time')
+        axes2[0].grid(alpha=0.3)
+
+        axes2[1].plot(t, y, 'g-', lw=1)
+        axes2[1].set(ylabel='Y (East, m)', title='Y (East) vs Time')
+        axes2[1].grid(alpha=0.3)
+
+        axes2[2].plot(t, h, 'b-', lw=1)
+        axes2[2].set(xlabel='Time (s)', ylabel='Z / Height (m)', title='Z (Height) vs Time')
+        axes2[2].grid(alpha=0.3)
+
+        plt.savefig(trajectory_path, dpi=150, bbox_inches='tight')
+        print(f"Saved plot to {trajectory_path}")
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python3 plot_trajectory.py <input.csv> [output.png]")
         sys.exit(1)
     csv_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else 'rocket_trajectory.png'
+    output_path = sys.argv[2] if len(sys.argv) > 2 else 'rocket_analysis.png'
     plot_trajectory(csv_path, output_path)

@@ -4,6 +4,13 @@
 #include <vector>
 #include <string>
 
+// Eigen::Vector3d = a fixed-size 3-number vector (x,y,z) from the Eigen
+// math library, used below for physical 3D quantities.
+//
+// All the structs in this file use "struct" rather than "class" -- fields
+// are public by default, since these are just data bundles passed around
+// between classes, with no internal invariant to protect via private members.
+
 // Everything the vehicle is doing right now: where it is, how fast,
 // which way it's pointed, how fast it's rotating, and how heavy it is.
 struct RocketState {
@@ -121,5 +128,8 @@ struct PitchTorques {
     double damping;      // N*m
 };
 
-// Convert grams to kg
+// Convert grams to kg.
+// inline = tells the compiler it's safe for this tiny function's body to be
+// copied into every place that calls it (needed since it's defined here in
+// a header, which can get #included into multiple .cpp files at once).
 inline double gramsToKg(double grams) { return grams / 1000.0; }

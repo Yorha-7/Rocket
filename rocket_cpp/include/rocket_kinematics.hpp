@@ -26,6 +26,9 @@ public:
     // Run the full flight, stepping through FlightData until ground contact.
     std::vector<RocketState> simulate(double time, const FlightData& flight_data) const;
 
+    // Return type is a const reference (a read-only alias to the member,
+    // no copy made) -- cheap, but the caller can't modify config_/params_
+    // through it.
     const SimulationConfig& getConfig() const { return config_; }
     const RocketParams& getParams() const { return params_; }
 
@@ -50,6 +53,11 @@ private:
     double computePitchAcceleration(double total_torque, const MassProperties& mp) const;
     void updatePitchDynamics(RocketState& next, const RocketState& state) const;
 
+    // These are stored by value (real, owned copies -- not references),
+    // unlike AerodynamicsModel::params_ which stores a reference. That's
+    // why this class's constructor doesn't need "explicit": it takes 3
+    // arguments, so it's never eligible for the single-argument implicit
+    // conversion explicit guards against.
     RocketParams params_;
     SimulationConfig config_;
     AerodynamicsModel aero_;
