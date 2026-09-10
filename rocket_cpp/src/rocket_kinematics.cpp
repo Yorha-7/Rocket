@@ -71,17 +71,22 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     return fc;
 }
 
-// Everything that pushes or pulls on the rocket: thrust along its own
-// axis, drag opposing its velocity (drag coefficient computed by our own
-// AerodynamicsModel, not read from anywhere), and gravity -- summed in
-// the world frame. computeAcceleration() just divides this by mass;
-// computeNetForce() exposes it directly for logging/plotting.
+// Everything that pushes or pulls on the rocket: thrust along the
+// TVC-deflected nozzle direction (state's own gimbal_pitch_rad/
+// gimbal_yaw_rad -- see ThrustVectorControl; (0,0,thrust) when both are
+// 0, i.e. no deflection), drag opposing its velocity (drag coefficient
+// computed by our own AerodynamicsModel, not read from anywhere), and
+// gravity -- summed in the world frame. computeAcceleration() just
+// divides this by mass; computeNetForce() exposes it directly for
+// logging/plotting. Deliberately reads the gimbal angles from `state`,
+// not from the live tvc_ member -- see tvc_'s declaration comment.
 Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, double thrust) const {
     const double g0 = 9.80665;
     const double v = state.velocity.norm();
     const double v2 = v * v;
 
-    Eigen::Vector3d thrust_body(0, 0, thrust);
+    Eigen::Vector3d thrust_body = -thrust * ThrustVectorControl::nozzleDirectionFromAngles(
+        state.gimbal_pitch_rad, state.gimbal_yaw_rad);
 
     double altitude = std::max(0.0, state.position(2));
     double rho = aero_.getDensity(altitude);
@@ -110,7 +115,15 @@ Eigen::Vector3d RocketKinematics::computeAcceleration(const RocketState& state, 
     return computeNetForce(state, thrust) / state.mass;
 }
 
-RocketState RocketKinematics::step(const RocketState& state, double thrust) const {
+RocketState RocketKinematics::step(const RocketState& state, double thrust,
+                                   const Eigen::Vector3d& tvc_target_dir) {
+    // The live actuator always starts this call sitting at `state`'s own
+    // gimbal angles (see tvc_'s declaration comment) -- command the new
+    // target, then use THIS step's force with the actuator still at its
+    // pre-command position (it hasn't physically moved yet), matching a
+    // real servo's lag.
+    tvc_.commandForceDirection(tvc_target_dir);
+
     RocketState next = state;
 
     Eigen::Vector3d accel = computeAcceleration(state, thrust);
@@ -125,11 +138,18 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust) cons
     next.orientation(0) = fmod(state.orientation(0), 2*M_PI);
     next.orientation(2) = fmod(state.orientation(2), 2*M_PI);
 
+    // Now advance the actuator toward its (possibly just-changed) target,
+    // and bake the result into next -- this is what computeNetForce will
+    // read on the FOLLOWING call.
+    tvc_.step(config_.dt);
+    next.gimbal_pitch_rad = tvc_.currentGimbalPitchRad();
+    next.gimbal_yaw_rad = tvc_.currentGimbalYawRad();
+
     return next;
 }
 
-std::vector<RocketState> RocketKinematics::simulate(double time,
-                                                    const FlightData& flight_data) const {
+std::vector<RocketState> RocketKinematics::simulate(double time, const FlightData& flight_data,
+                                                    const std::vector<Eigen::Vector3d>& tvc_targets) {
     int n_steps = static_cast<int>(time / config_.dt);
     if (n_steps >= (int)flight_data.time.size()) {
         n_steps = flight_data.time.size() - 1;
@@ -144,15 +164,20 @@ std::vector<RocketState> RocketKinematics::simulate(double time,
         config_.init_yaw * M_PI / 180.0);
     initial.angular_vel = Eigen::Vector3d::Zero();
     initial.mass = gramsToKg(flight_data.mass.front());
+    initial.gimbal_pitch_rad = 0.0;
+    initial.gimbal_yaw_rad = 0.0;
     states[0] = initial;
+
+    const Eigen::Vector3d no_deflection(0, 0, 1);
 
     for (int i = 0; i < n_steps; ++i) {
         double thrust = flight_data.thrust[i];
         double mass_kg = gramsToKg(flight_data.mass[i]);
+        const Eigen::Vector3d& tvc_target = (i < (int)tvc_targets.size()) ? tvc_targets[i] : no_deflection;
 
         RocketState temp = states[i];
         temp.mass = mass_kg;
-        states[i + 1] = step(temp, thrust);
+        states[i + 1] = step(temp, thrust, tvc_target);
 
         if (states[i + 1].position(2) < 0.0) {
             double z_above = states[i].position(2);

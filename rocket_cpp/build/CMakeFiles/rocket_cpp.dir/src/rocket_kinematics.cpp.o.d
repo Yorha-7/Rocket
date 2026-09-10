@@ -403,4 +403,5 @@ CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o: \
  /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
  /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/aerodynamics.hpp \
  /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/mass_properties_model.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork_mass_components.hpp
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork_mass_components.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/thrust_vector_control.hpp
