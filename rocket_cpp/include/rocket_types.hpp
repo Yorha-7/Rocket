@@ -94,6 +94,8 @@ struct RocketParams {
 struct SimulationConfig {
     double launch_height;  // launch site height above ground (m)
     double init_tilt;      // initial pitch angle from vertical (degrees)
+    double init_yaw;       // initial yaw angle (degrees) -- fixed for the whole
+                            // flight, no restoring torque model yet (like roll)
     double sim_duration;   // total simulation time (s)
     double dt;              // time step (s)
 };

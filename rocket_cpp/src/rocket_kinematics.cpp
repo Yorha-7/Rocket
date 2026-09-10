@@ -45,7 +45,24 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     fc.velocity = velocity;
     fc.mach = velocity / aero_.getSpeedOfSound(altitude);
     fc.dynamic_pressure = 0.5 * aero_.getDensity(altitude) * velocity * velocity;
-    fc.alpha = state.orientation(1);  // near-vertical-flight approximation
+
+    // True angle of attack: pitch minus the flight-path angle (the
+    // direction the rocket is actually moving), not just pitch alone.
+    // At v=0 (pad, or an apogee-of-apogee stall) atan2(0,0)=0, so this
+    // reduces to alpha=pitch -- matching the old approximation exactly
+    // at the moment it was valid. Once airborne, this is what lets the
+    // aero moment relax to zero as the body trims out along its actual
+    // velocity vector, instead of always fighting to point at vertical.
+    //
+    // Horizontal velocity is projected onto the fixed launch-azimuth
+    // (yaw) plane rather than just using vx: yaw never changes during
+    // flight (no yaw torque model yet), so the whole trajectory stays
+    // in that one vertical plane, and this projection is exact -- not
+    // an extra approximation on top of the near-vertical one below.
+    double yaw = state.orientation(2);
+    double v_horizontal = state.velocity(0) * cos(yaw) + state.velocity(1) * sin(yaw);
+    double flight_path_angle = atan2(v_horizontal, state.velocity(2));
+    fc.alpha = state.orientation(1) - flight_path_angle;
     fc.beta = 0.0;
     fc.roll_rate = state.angular_vel(0);
     fc.pitch_rate = state.angular_vel(1);
@@ -124,7 +141,7 @@ std::vector<RocketState> RocketKinematics::simulate(double time,
     initial.velocity = Eigen::Vector3d::Zero();
     initial.orientation = Eigen::Vector3d(0,
         config_.init_tilt * M_PI / 180.0,
-        0);
+        config_.init_yaw * M_PI / 180.0);
     initial.angular_vel = Eigen::Vector3d::Zero();
     initial.mass = gramsToKg(flight_data.mass.front());
     states[0] = initial;

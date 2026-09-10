@@ -6,30 +6,37 @@
 // ============================================================
 // Pitch dynamics: how the rocket tips forward/backward.
 //
-// Three things fight for control of the pitch angle each step:
-//   1. Gravity, acting at the center of gravity (CG), pulling the
-//      nose back toward vertical if the center of pressure (CP) is
-//      behind the CG (a stable rocket).
-//   2. Aerodynamic force, acting at the CP, which also pushes the
-//      nose back toward the direction of travel.
-//   3. Damping, which just resists whatever rotation is happening,
+// Two things fight for control of the pitch angle each step:
+//   1. Aerodynamic force, acting at the CP, which pushes the nose
+//      back toward the direction of travel whenever the body axis
+//      and velocity vector disagree (real angle of attack -- see
+//      buildFlightConditions -- not just absolute tilt from vertical).
+//   2. Damping, which just resists whatever rotation is happening,
 //      like air resistance on a spinning weathervane.
 // Their combined torque, divided by how hard the rocket resists
 // rotating (its moment of inertia), gives the pitch acceleration.
+//
+// Gravity is NOT a third contributor: a uniform gravitational field
+// exerts zero net torque about a rigid body's own center of gravity,
+// by definition of the CG. (computeGravityTorque is kept as a
+// deliberate always-zero stub -- see below -- rather than removed, so
+// the CSV/plots keep the same 3-column torque breakdown and visibly
+// show that contribution as zero instead of silently disappearing.)
 //
 // CP/CG/inertia (MassProperties) and the normal-force slope Cn_alpha are
 // both computed from the vehicle's own geometry (AerodynamicsModel,
 // VehicleMassModel) -- nothing here is read from a pre-solved simulation.
 // ============================================================
 
-// Gravity pulls straight down on the CG. If the CP is behind the CG
-// (the stable configuration) and the nose is tipped over, that
-// creates a torque that rotates the nose back up.
+// Always zero: gravity acts through the CG by definition, so it can't
+// exert a torque about the CG no matter where the CP sits. An earlier
+// version of this modeled gravity as a pendulum restoring torque
+// (mass on a rod pivoting around a fixed point) -- physically wrong for
+// a body in free flight, and it dominated the (also wrong) pitch
+// behavior at large launch angles.
 double RocketKinematics::computeGravityTorque(const RocketState& state,
                                               const MassProperties& mp) const {
-    double cp_cg_diff_m = (mp.cp_location_cm - mp.cg_location_cm) / 100.0;
-    double pitch = state.orientation(1);
-    return -state.mass * 9.80665 * cp_cg_diff_m * sin(pitch);
+    return 0.0;
 }
 
 // Air pushing on the CP, offset from the CG, also creates a

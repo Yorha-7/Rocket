@@ -1,13 +1,27 @@
 # rocket_cpp
 
-C++ 3DOF (translation) + 1DOF (pitch) rocket trajectory simulator. It loads
-the rocket's geometry from an OpenRocket `.ork` design file and computes its
-own drag/normal-force coefficients and mass properties (Barrowman method)
-from that geometry — the only things still read from the `.ork` are thrust
-and total mass over time (motor performance data, not something OpenRocket
-"computed" from the design). Replays the flight through an Eigen-based
-Euler integrator, produces `rocket_trajectory.csv`, and calls a
-Python/matplotlib script to render `rocket_trajectory.png`.
+C++ 3DOF (translation, all of x/y/z) + 1DOF (pitch) rocket trajectory
+simulator. It loads the rocket's geometry from an OpenRocket `.ork` design
+file and computes its own drag/normal-force coefficients and mass properties
+(Barrowman method) from that geometry — the only things still read from the
+`.ork` are thrust and total mass over time (motor performance data, not
+something OpenRocket "computed" from the design). Replays the flight through
+an Eigen-based Euler integrator, produces `rocket_trajectory.csv`, and calls
+a Python/matplotlib script to render `rocket_trajectory.png`. A second,
+interactive 3D viewer (`scripts/trajectory.py`) is also available on demand.
+
+**Current physics feature set:**
+- Real x/y/z translation: thrust and drag both rotate into the world frame
+  through the full roll-pitch-yaw DCM, so a launch-azimuth (`init_yaw`)
+  genuinely deflects the flight path sideways, not just forward.
+- Pitch dynamics driven by real angle of attack (body axis vs. actual
+  velocity vector, not just absolute tilt from vertical) plus aerodynamic
+  damping — see [Coordinate frames](#coordinate-frames--axis-conventions)
+  for the two correctness bugs this replaced.
+- Time-varying CP/CG/inertia and Barrowman aerodynamic coefficients,
+  computed from the vehicle's own geometry every step (not flight-averaged
+  constants, not read from OpenRocket's own solved simulation).
+- Ground-contact termination with exact linear-interpolated impact point.
 
 > **This directory is a staging area.** Not everything in `include/`/`src/`
 > is wired into the build. See [Staging Notes](#staging-notes) before
@@ -47,11 +61,11 @@ or `step()`.
 | `simulate(time, flight_data)` | rocket_kinematics.cpp | **public** — run full flight, one `step()` per sample |
 | `getParams()` / `getConfig()` | rocket_kinematics.hpp | **public** — accessors |
 | `computeNetForce(state, thrust)` | rocket_kinematics.cpp | **public** — thrust + drag (our own Cd) + gravity, world frame, undivided by mass |
-| `computePitchTorques(state)` | pitch_dynamics.cpp | **public** — gravity/aero/damping torque breakdown, for logging (not used by `step()` itself) |
+| `computePitchTorques(state)` | pitch_dynamics.cpp | **public** — gravity(=0)/aero/damping torque breakdown, for logging (not used by `step()` itself) |
 | `computeAcceleration()` | rocket_kinematics.cpp | `computeNetForce() / mass` |
 | `rocketToNedFrame()` | rocket_kinematics.cpp | body → world rotation matrix |
-| `buildFlightConditions()` | rocket_kinematics.cpp | state → `FlightConditions` (mach, alpha, altitude...) for the aero model |
-| `computeGravityTorque()` | pitch_dynamics.cpp | gravity's restoring torque |
+| `buildFlightConditions()` | rocket_kinematics.cpp | state → `FlightConditions` — real angle of attack (pitch minus flight-path angle, not raw pitch), mach, altitude... for the aero model |
+| `computeGravityTorque()` | pitch_dynamics.cpp | always `0.0` — gravity has no net torque about a body's own CG (deliberate stub, see below) |
 | `computeAerodynamicMoment()` | pitch_dynamics.cpp | aero restoring moment (reads `Cn_alpha` from `AerodynamicsModel`) |
 | `computeDampingTorque()` | pitch_dynamics.cpp | resists rotation |
 | `computeTotalPitchTorque()` | pitch_dynamics.cpp | sums the 3 torques above |
@@ -136,18 +150,72 @@ rocket_cpp/
 
 ## Build & run
 
-Dependencies beyond Eigen3: **libzip** and **tinyxml2** (both located via
-pkg-config — the system's libzip CMake package is broken, see the comment
-in `CMakeLists.txt`).
+### Prerequisites
+
+- A C++17 compiler + CMake
+- **Eigen3** — the integrator's vector/matrix math
+- **libzip** and **tinyxml2** (both located via pkg-config — the system's
+  libzip CMake package is broken, see the comment in `CMakeLists.txt`) — for
+  unzipping and parsing the `.ork` design file
+- **Python 3** with `pandas`, `numpy`, `matplotlib` — only needed for the
+  plots; the simulation itself and the CSV it writes don't depend on Python
+
+### Build
 
 ```bash
 mkdir -p build && cd build
 cmake .. && make
-./rocket_cpp
 ```
+
+### Run a simulation
+
+```bash
+./rocket_cpp        # from build/, or wherever the binary ends up
+```
+
+This loads `artifacts/rocket.ork`, runs the full flight (boost through
+ground impact), and — from the project root, which it `chdir`s into itself
+— writes:
+- `rocket_trajectory.csv` — the full time-series state
+- `rocket_analysis.png` — the 8-panel flight-analysis figure (below)
+- `rocket_trajectory.png` — X/Y/Z-vs-time position panels
+
+Console output along the way reports the vehicle's own computed dry
+mass/CG/CP/I_yy and drag/normal-force coefficients at a sample flight
+condition, so you can sanity-check the geometry parse before trusting the
+trajectory.
 
 `main.cpp` hardcodes an absolute path to `artifacts/rocket.ork` and to the
 project root for the plot call — update those if you move the tree.
+
+### Customize a launch
+
+There's no CLI yet — launch conditions are edited directly in `main.cpp`:
+
+| What | Where | Notes |
+|---|---|---|
+| Launch tilt (pitch) | `INIT_TILT_OVERRIDE_DEG` in `main.cpp` | Degrees from vertical. Every simulation embedded in the `.ork` uses a dead-vertical rod (0°), so this override is what actually gives the pitch dynamics something to act on. |
+| Launch azimuth (yaw) | `INIT_YAW_OVERRIDE_DEG` in `main.cpp` | Degrees. Fixed for the whole flight (no yaw torque model) — see [Sign conventions](#sign-conventions) for how it combines with tilt. |
+| Integrator step size | `config.dt` | Smaller = more accurate but slower and a bigger CSV. |
+| Which motor config | `loadOrkRocket(path, dt, motor?)` (`ork_loader.hpp`) | Defaults to the `.ork`'s `default="true"` simulation; pass a motor name to pick another of the 5 embedded configs. |
+
+Re-run `cmake --build build` after editing, then `./build/rocket_cpp` again.
+
+### Visualize a trajectory
+
+The 2D panel figures above are generated automatically. For an interactive,
+rotatable 3D view of the same flight:
+
+```bash
+python3 scripts/trajectory.py rocket_trajectory.csv   # defaults to this path if omitted
+```
+
+Opens a matplotlib window (rotate/zoom with the mouse) with the path colored
+by time and launch/apogee/impact markers. The box is a fixed equal-unit cube
+(same meter range on all three axes, auto-sized to the flight's extent) so
+angles read honestly — see [Coordinate frames](#coordinate-frames--axis-conventions)
+for why that matters and what the alternative (a metrically "true to scale"
+box) actually looks like for a mostly-vertical flight.
 
 ## Coordinate frames & axis conventions
 
@@ -172,8 +240,11 @@ the thrust axis is Z.
 ### Orientation & the body→world rotation
 
 `orientation = (roll, pitch, yaw)` rad, `angular_vel = (p, q, r)` rad/s. Only
-pitch (index 1) is dynamic — roll/yaw just wrap into `[0, 2π)`, no torque
-drives them (see [Staging Notes](#staging-notes)).
+pitch (index 1) is dynamic — roll/yaw just wrap into `[0, 2π)` every step, no
+torque drives them (see [Staging Notes](#staging-notes)). Yaw does get a real
+nonzero **initial** value from `init_yaw` (unlike roll, which never does) —
+it just stays fixed at that value for the entire flight, acting like a
+constant launch-azimuth offset rather than something that evolves.
 
 `rocketToNedFrame()` builds the body→world rotation matrix — the standard
 Z-Y-X aerospace DCM, $R = R_z(\psi)R_y(\theta)R_x(\phi)$ (φ=roll, θ=pitch, ψ=yaw):
@@ -197,9 +268,60 @@ never fed back into translation — invisible until the Forces panel (below)
 made `Fx ≡ 0` for the entire flight obvious. Fixed; `Fx` now correctly
 tracks `T·sinθ`.
 
+### Yaw's y-component is suppressed relative to x, not equal to it
+
+With roll=0, thrust's world-frame components (from the DCM above) reduce to
+`Fx = T·sinθ` but `Fy = T·sinψ·sinθ` — a *product* of two sines, not a
+single one. Equal-looking `init_tilt`/`init_yaw` values do **not** produce
+comparably-sized x and y drift: for small angles `Fy/Fx ≈ sinψ`, so a 3°
+yaw next to a 3° pitch gives y-motion roughly 19× smaller than x-motion, not
+the same size. This is a real property of the Z-Y-X Euler order (yaw can't
+rotate a vector that's still pointing along the axis it's yawing about,
+until pitch has already tilted it off that axis), not a bug — but it's easy
+to expect otherwise from the config names alone.
+
+### Two pitch-dynamics correctness bugs (fixed)
+
+Both were only obvious at large tilt angles — near-vertical flight (the
+`.ork`'s own dead-vertical launch rod) never exercised the broken cases:
+
+1. **Invalid gravity torque.** An earlier `computeGravityTorque()` modeled
+   gravity as a pendulum restoring torque (`-mg·d·sinθ`, `d` = CP-CG
+   offset) — physically impossible: a uniform gravitational field exerts
+   **zero** net torque about a rigid body's own center of gravity, by
+   definition of the CG. At small angles this term was small enough not to
+   matter much; at a 70° test tilt it dominated the (also wrong) pitch
+   behavior and single-handedly snapped the rocket back through vertical
+   within half a second, regardless of how far over it actually started.
+   Fixed: the function is now a deliberate always-`0.0` stub (kept, not
+   deleted, so the CSV/plots keep the same 3-column torque breakdown and
+   show the zero explicitly).
+2. **Angle of attack was just raw pitch.** `fc.alpha = state.orientation(1)`
+   only approximates real angle of attack — the angle between the body axis
+   and the *actual velocity vector* — when the rocket is already flying
+   close to vertical. At large tilt it was badly wrong (e.g. a rocket
+   flying straight along its own 70°-tilted axis would report a fictitious
+   70° angle of attack, generating aerodynamic torque that fights reality
+   instead of responding to it). Fixed in `buildFlightConditions()`:
+   `alpha = pitch − flight_path_angle`, where the flight-path angle comes
+   from the real velocity vector (projected onto the fixed launch-azimuth
+   plane, since yaw is static — see above). This reduces to the old
+   approximation exactly when velocity is ~0 (pad, or a momentary stall),
+   and correctly relaxes toward 0 once the body trims out along its actual
+   direction of travel (real weathercocking), instead of always fighting to
+   point at vertical.
+
+Combined effect on a 70°/70° tilt test case: apogee went from 364m
+(near-vertical baseline) → a buggy 311m (85% of baseline — the invalid
+torque was erasing almost the entire tilt penalty) → a physically-argued
+268m after both fixes (still recovers real altitude via legitimate
+weathercocking, since `cos(70°)·T` is still positive thrust the whole
+burn — not a leftover bug).
+
 ### Sign conventions
 
-- **Pitch** — 0 = vertical (nose up, +Z); positive pitch tips the nose over. `init_tilt` (from the `.ork`'s launch rod angle) is pitch-from-vertical, applied at `t=0`. Every embedded `.ork` simulation launches from a dead-vertical rod, so `main.cpp` overrides it to 3° — otherwise the pitch model has nothing to restore from.
+- **Pitch** — 0 = vertical (nose up, +Z); positive pitch tips the nose over. `init_tilt` (from the `.ork`'s launch rod angle) is pitch-from-vertical, applied at `t=0`. Every embedded `.ork` simulation launches from a dead-vertical rod, so `main.cpp` overrides it (`INIT_TILT_OVERRIDE_DEG`) to a small nonzero angle — otherwise the pitch model has nothing to restore from.
+- **Yaw** — 0 = launch azimuth aligned with `+X`; positive yaw rotates the launch azimuth toward `+Y`. The `.ork` format has no yaw/azimuth concept at all, so `main.cpp`'s `INIT_YAW_OVERRIDE_DEG` is a pure sim-side override, not derived from the design file. Combines with pitch to produce real x/y motion — see [the sine-product note above](#yaws-y-component-is-suppressed-relative-to-x-not-equal-to-it) before assuming equal tilt/yaw angles give equal-sized drift.
 - **CP/CG locations** — cm from the **nose tip**. `d = cp - cg` is the static margin; `d > 0` (CP aft of CG) is stable and produces a restoring torque.
 
 ## State & parameter reference
@@ -210,7 +332,7 @@ tracks `T·sinθ`.
 |---|---|---|
 | `position` | (x, y, z) — z = altitude above pad | m |
 | `velocity` | (vx, vy, vz) in world frame | m/s |
-| `orientation` | (roll, pitch, yaw); only pitch is dynamic | rad |
+| `orientation` | (roll, pitch, yaw); only pitch evolves after `t=0` — yaw holds whatever `init_yaw` set it to, roll stays 0 | rad |
 | `angular_vel` | (p, q, r); only q (index 1) is dynamic | rad/s |
 | `mass` | current vehicle mass, overwritten each step from `FlightData` | kg |
 
@@ -247,7 +369,8 @@ body assumption).
 `SimulationConfig` — how *we* choose to run the integrator, separate from
 anything the rocket's design implies: `sim_duration`, `dt` are our own
 choice; `launch_height`, `init_tilt` are pulled from the `.ork`'s launch
-conditions for the selected simulation (see the 3° override above).
+conditions for the selected simulation (see the override above); `init_yaw`
+has no `.ork` equivalent at all and is purely a `main.cpp` override.
 
 ## Mathematical model
 
@@ -298,10 +421,22 @@ At each instant, motor mass = `total_mass(t) − dry_mass` (fixed axial position
 
 ### 5. Pitch dynamics (1DOF rotational, `pitch_dynamics.cpp`)
 
-$d=(cp-cg)/100$, $\theta$=pitch, $q$=pitch rate:
+$d=(cp-cg)/100$, $\theta$=pitch, $q$=pitch rate. Angle of attack $\alpha$ is
+**not** raw pitch — it's pitch minus the actual flight-path angle $\gamma$
+(the direction the velocity vector points, projected onto the fixed
+launch-azimuth plane, since yaw is static):
 
 $$
-\tau_g = -mg_0 d\sin\theta, \qquad
+\gamma = \operatorname{atan2}(v_x\cos\psi + v_y\sin\psi,\ v_z), \qquad \alpha = \theta - \gamma
+$$
+
+Only two torques act — gravity contributes none (zero net torque about a
+body's own CG, by definition; see
+[Coordinate frames](#coordinate-frames--axis-conventions) for the bug this
+replaced):
+
+$$
+\tau_g = 0, \qquad
 \tau_a = -\tfrac12\rho v^2 C_{N\alpha}\alpha A d\ (\alpha\text{ clamped }\pm0.5\text{ rad}), \qquad
 \tau_d = -\left(0.6\cdot\tfrac12\rho v d^2 A\right)q
 $$
@@ -323,13 +458,17 @@ Roll/yaw just wrap into $[0,2\pi)$, no torque. When $z$ crosses below 0, linear 
 ## Output & graphs
 
 Running `./rocket_cpp` writes `rocket_trajectory.csv`
-(`time, height, velocity, pitch, ang_vel, ang_accel, fx, fy, fz,
+(`time, x, y, height, velocity, pitch, ang_vel, ang_accel, fx, fy, fz,
 torque_gravity, torque_aero, torque_damping` — the last 6 are diagnostics
 recomputed via `RocketKinematics::computeNetForce()`/`computePitchTorques()`,
 not part of the integration itself) and invokes `scripts/plot_trajectory.py`,
-producing this 8-panel figure:
+producing this 8-panel figure, plus a second `rocket_trajectory.png` with
+X/Y/Z position each plotted against time in its own panel:
 
-![Rocket trajectory](rocket_trajectory.png)
+![Rocket flight analysis](rocket_analysis.png)
+
+For a spatial (not vs-time) view, see `scripts/trajectory.py` — an
+interactive 3D viewer covered in [Visualize a trajectory](#visualize-a-trajectory).
 
 | Panel | Data | What to look for |
 |---|---|---|
@@ -339,8 +478,8 @@ producing this 8-panel figure:
 | Pitch Angle vs Time | `orientation(1)` in degrees | Damps fast under thrust (high airspeed → strong damping), swells again near apogee (airspeed → 0, damping vanishes), re-damps during descent |
 | Angular Velocity vs Time | `angular_vel(1)` in deg/s | Pitch rate $q$ |
 | Angular Acceleration vs Time | finite-difference of angular velocity (impact sample dropped, same reason) | $\dot q$ |
-| Forces vs Time | `fx, fy, fz` — net world-frame force | `fz` (thrust − drag − gravity) dominates; `fx` tracks `T·sinθ` and is small since pitch stays under ~3°; `fy` is exactly 0 (no yaw dynamics, so no out-of-plane force) |
-| Torque Analysis | `torque_gravity, torque_aero, torque_damping` | Aerodynamic torque dominates by ~2 orders of magnitude over this vehicle's flight regime; gravity/damping are both comparatively tiny |
+| Forces vs Time | `fx, fy, fz` — net world-frame force | `fz` (thrust − drag − gravity) dominates; `fx` tracks `T·sinθ`; `fy` tracks `T·sinψ·sinθ` — real but noticeably smaller than `fx` for equal tilt/yaw angles (see [the sine-product note](#yaws-y-component-is-suppressed-relative-to-x-not-equal-to-it)), and exactly 0 if `init_yaw` is 0 |
+| Torque Analysis | `torque_gravity, torque_aero, torque_damping` | `torque_gravity` is now identically 0 (see [pitch-dynamics bug fixes](#two-pitch-dynamics-correctness-bugs-fixed)) — aerodynamic torque and damping are the only real contributors, with aero typically dominating |
 
 **No parachute is modeled — descent is a fast ballistic fall (~58 m/s
 impact), not a slow chute-assisted one.** Earlier versions of this sim
@@ -361,8 +500,13 @@ capability gap (see Staging Notes).
    (`Eigen::Matrixd` isn't a real type).
 3. **"NED" labeling is inaccurate** — see [Coordinate frames](#coordinate-frames--axis-conventions).
 4. **Roll/yaw are purely kinematic** — no torque model, no inertia coupling
-   (fin cant is parsed but unused). That, plus real air-relative α/β and
-   Euler-rate kinematics, is what's missing for true 6DOF.
+   (fin cant is parsed but unused). Yaw gets a real, static initial value
+   (`init_yaw`) that genuinely deflects the trajectory (see
+   [Coordinate frames](#coordinate-frames--axis-conventions)), but nothing
+   ever restores or evolves it in flight — no weathercocking in the yaw
+   plane the way pitch has. That, plus real air-relative β (sideslip; only
+   α is real now) and Euler-rate kinematics, is what's missing for true
+   6DOF.
 5. **`I_xx` (roll inertia) is a coarse thin-shell/point estimate** in
    `VehicleMassModel` — fine for now since nothing reads it (no roll torque
    model yet), but should be revisited before any roll dynamics are added.

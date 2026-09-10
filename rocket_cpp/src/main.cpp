@@ -32,8 +32,15 @@ int main() {
     // never has anything to restore from. Override with a small nonzero
     // tilt so the pitch dynamics (gravity/aero/damping torque) actually
     // show something, instead of leaving it real but silent.
-    const double INIT_TILT_OVERRIDE_DEG = 3.0;
+    const double INIT_TILT_OVERRIDE_DEG = 80.0;
     config.init_tilt = INIT_TILT_OVERRIDE_DEG;
+
+    // Same idea, but for yaw: the .ork has no yaw/azimuth concept at all,
+    // so this is a small fixed launch-azimuth deviation rather than
+    // anything read from the design file. Stays constant for the whole
+    // flight -- there's no yaw torque model yet to let it evolve.
+    const double INIT_YAW_OVERRIDE_DEG = 80.0;
+    config.init_yaw = INIT_YAW_OVERRIDE_DEG;
 
     const RocketParams& params = rocket.params;
     const FlightData& flight_data = rocket.flight_data;

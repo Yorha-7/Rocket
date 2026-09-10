@@ -177,16 +177,23 @@ def plot_trajectory(csv_path, output_path):
         fig2, axes2 = plt.subplots(3, 1, figsize=(8, 9), constrained_layout=True, sharex=True)
         fig2.suptitle('Rocket Position Components vs Time', fontsize=14)
 
+        # Each subplot auto-scales its own y-axis to fill the same panel
+        # height, independent of the others -- so a few meters of X drift
+        # gets drawn just as tall as a 300+ m altitude swing. Put the real
+        # range in the title so the true scale is obvious without having
+        # to compare tick labels across panels.
+        x_range, y_range, z_range = np.ptp(x), np.ptp(y), np.ptp(h)
+
         axes2[0].plot(t, x, 'r-', lw=1)
-        axes2[0].set(ylabel='X (m)', title='X (North) vs Time')
+        axes2[0].set(ylabel='X (m)', title=f'X (North) vs Time  [range: {x_range:.2f} m]')
         axes2[0].grid(alpha=0.3)
 
         axes2[1].plot(t, y, 'g-', lw=1)
-        axes2[1].set(ylabel='Y (East, m)', title='Y (East) vs Time')
+        axes2[1].set(ylabel='Y (East, m)', title=f'Y (East) vs Time  [range: {y_range:.2f} m]')
         axes2[1].grid(alpha=0.3)
 
         axes2[2].plot(t, h, 'b-', lw=1)
-        axes2[2].set(xlabel='Time (s)', ylabel='Z / Height (m)', title='Z (Height) vs Time')
+        axes2[2].set(xlabel='Time (s)', ylabel='Z / Height (m)', title=f'Z (Height) vs Time  [range: {z_range:.2f} m]')
         axes2[2].grid(alpha=0.3)
 
         plt.savefig(trajectory_path, dpi=150, bbox_inches='tight')
