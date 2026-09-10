@@ -25,6 +25,7 @@ add_executable(rocket_cpp
     src/ork_flightdata.cpp
     src/ork_mass_components.cpp
     src/ork_loader.cpp
+    src/thrust_vector_control.cpp
     include/rocket_types.hpp
     include/rocket_kinematics.hpp
     include/aerodynamics.hpp
@@ -34,6 +35,7 @@ add_executable(rocket_cpp
     include/ork_flightdata.hpp
     include/ork_mass_components.hpp
     include/ork_loader.hpp
+    include/thrust_vector_control.hpp
 )
 
 target_include_directories(rocket_cpp PRIVATE include)

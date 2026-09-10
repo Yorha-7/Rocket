@@ -21,6 +21,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o.d"
   "CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o"
   "CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o.d"
+  "CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o"
+  "CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o.d"
   "rocket_cpp"
   "rocket_cpp.pdb"
 )

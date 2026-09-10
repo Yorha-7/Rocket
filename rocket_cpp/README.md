@@ -219,6 +219,18 @@ box) actually looks like for a mostly-vertical flight.
 
 ## Coordinate frames & axis conventions
 
+![Axis, orientation-angle and planned-TVC symbol reference](docs/axis_and_tvc_reference.png)
+
+Left: body vs. world frame and the pitch (θ)/yaw (ψ)/roll (φ) angles this
+sim actually uses, at an illustrative non-zero pose — every symbol maps to
+the `orientation(0..2)` index used in code, spelled out below. Right: the
+**planned** (not yet implemented) thrust-vector-control gimbal cone —
+nozzle deflection is measured off the body **−Z** axis (nozzle-neutral,
+opposite the nose), and the resulting force on the vehicle (what feeds
+`computeNetForce()`) is the negation of that direction, per Newton's third
+law. Regenerate this image with `scripts/make_axis_diagram.py` if the axis
+convention ever changes.
+
 ### World frame — labeled "NED", actually Z-up
 
 Commented `x, y, z in NED frame`, but it isn't North-East-Down: gravity is

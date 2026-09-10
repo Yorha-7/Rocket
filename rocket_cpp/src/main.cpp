@@ -4,10 +4,46 @@
 #include "mass_properties_model.hpp"
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <iomanip>
 #include <cstdlib>
 #include <unistd.h>
+
+// Reads data/tvc_test_sequence.csv (time-segment table: t_start_s,t_end_s,
+// target_x,target_y,target_z,note) and expands it into one target-direction
+// vector per simulation step, so RocketKinematics::simulate() can command
+// ThrustVectorControl the same way every step without knowing about time
+// segments itself. Steps past the last segment's t_end_s get no deflection.
+std::vector<Eigen::Vector3d> loadTvcTestSequence(const std::string& csv_path, double dt, int n_steps) {
+    struct Segment { double t_start, t_end; Eigen::Vector3d target; };
+    std::vector<Segment> segments;
+
+    std::ifstream file(csv_path);
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::stringstream ss(line);
+        std::string field;
+        std::vector<std::string> fields;
+        while (std::getline(ss, field, ',')) fields.push_back(field);
+        if (fields.size() < 5) continue;
+        segments.push_back({std::stod(fields[0]), std::stod(fields[1]),
+                             Eigen::Vector3d(std::stod(fields[2]), std::stod(fields[3]), std::stod(fields[4]))});
+    }
+
+    std::vector<Eigen::Vector3d> targets(n_steps, Eigen::Vector3d(0, 0, 1));
+    for (int i = 0; i < n_steps; ++i) {
+        double t = i * dt;
+        for (const auto& seg : segments) {
+            if (t >= seg.t_start && t < seg.t_end) {
+                targets[i] = seg.target;
+                break;
+            }
+        }
+    }
+    return targets;
+}
 
 int main() {
     // ============================================================
@@ -32,14 +68,14 @@ int main() {
     // never has anything to restore from. Override with a small nonzero
     // tilt so the pitch dynamics (gravity/aero/damping torque) actually
     // show something, instead of leaving it real but silent.
-    const double INIT_TILT_OVERRIDE_DEG = 80.0;
+    const double INIT_TILT_OVERRIDE_DEG = 3.0;
     config.init_tilt = INIT_TILT_OVERRIDE_DEG;
 
     // Same idea, but for yaw: the .ork has no yaw/azimuth concept at all,
     // so this is a small fixed launch-azimuth deviation rather than
     // anything read from the design file. Stays constant for the whole
     // flight -- there's no yaw torque model yet to let it evolve.
-    const double INIT_YAW_OVERRIDE_DEG = 80.0;
+    const double INIT_YAW_OVERRIDE_DEG = 3.0;
     config.init_yaw = INIT_YAW_OVERRIDE_DEG;
 
     const RocketParams& params = rocket.params;
@@ -88,18 +124,26 @@ int main() {
               << "m, init_tilt=" << config.init_tilt
               << "deg, dt=" << config.dt << "s\n";
 
-    auto states = sim.simulate(config.sim_duration, flight_data);
+    const std::string tvc_sequence_path = "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/data/tvc_test_sequence.csv";
+    int n_steps_estimate = static_cast<int>(config.sim_duration / config.dt);
+    auto tvc_targets = loadTvcTestSequence(tvc_sequence_path, config.dt, n_steps_estimate);
+    std::cout << "Loaded TVC test sequence from " << tvc_sequence_path << "\n";
+
+    auto states = sim.simulate(config.sim_duration, flight_data, tvc_targets);
 
     // ============================================================
     // Extract time series for output and plotting
     // ============================================================
     std::vector<double> time_vec, x_vec, y_vec, height_vec, velocity_vec, pitch_vec;
+    std::vector<double> gimbal_pitch_vec, gimbal_yaw_vec;
     time_vec.reserve(states.size());
     x_vec.reserve(states.size());
     y_vec.reserve(states.size());
     height_vec.reserve(states.size());
     velocity_vec.reserve(states.size());
     pitch_vec.reserve(states.size());
+    gimbal_pitch_vec.reserve(states.size());
+    gimbal_yaw_vec.reserve(states.size());
 
     for (size_t i = 0; i < states.size(); ++i) {
         time_vec.push_back(i * config.dt);
@@ -108,6 +152,8 @@ int main() {
         height_vec.push_back(states[i].position(2));
         velocity_vec.push_back(states[i].velocity.norm());
         pitch_vec.push_back(states[i].orientation(1) * 180.0 / M_PI);
+        gimbal_pitch_vec.push_back(states[i].gimbal_pitch_rad * 180.0 / M_PI);
+        gimbal_yaw_vec.push_back(states[i].gimbal_yaw_rad * 180.0 / M_PI);
     }
 
     // Angular velocity (pitch rate) and angular acceleration
@@ -164,14 +210,15 @@ int main() {
     }
     std::ofstream csv("rocket_trajectory.csv");
     csv << "time,x,y,height,velocity,pitch,ang_vel,ang_accel,"
-        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping\n";
+        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(6);
         csv << time_vec[i] << "," << x_vec[i] << "," << y_vec[i] << "," << height_vec[i] << ","
             << velocity_vec[i] << ","
             << pitch_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
             << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << ","
-            << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << "\n";
+            << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << ","
+            << gimbal_pitch_vec[i] << "," << gimbal_yaw_vec[i] << "\n";
     }
     csv.close();
 

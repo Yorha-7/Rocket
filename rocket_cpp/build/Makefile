@@ -393,6 +393,30 @@ src/rocket_kinematics.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.s
 .PHONY : src/rocket_kinematics.cpp.s
 
+src/thrust_vector_control.o: src/thrust_vector_control.cpp.o
+.PHONY : src/thrust_vector_control.o
+
+# target to build an object file
+src/thrust_vector_control.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o
+.PHONY : src/thrust_vector_control.cpp.o
+
+src/thrust_vector_control.i: src/thrust_vector_control.cpp.i
+.PHONY : src/thrust_vector_control.i
+
+# target to preprocess a source file
+src/thrust_vector_control.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.i
+.PHONY : src/thrust_vector_control.cpp.i
+
+src/thrust_vector_control.s: src/thrust_vector_control.cpp.s
+.PHONY : src/thrust_vector_control.s
+
+# target to generate assembly for a file
+src/thrust_vector_control.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.s
+.PHONY : src/thrust_vector_control.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -435,6 +459,9 @@ help:
 	@echo "... src/rocket_kinematics.o"
 	@echo "... src/rocket_kinematics.i"
 	@echo "... src/rocket_kinematics.s"
+	@echo "... src/thrust_vector_control.o"
+	@echo "... src/thrust_vector_control.i"
+	@echo "... src/thrust_vector_control.s"
 .PHONY : help
 
 

@@ -19,6 +19,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_mass_components.cpp" "CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o" "gcc" "CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o.d"
   "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/pitch_dynamics.cpp" "CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o" "gcc" "CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o.d"
   "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/rocket_kinematics.cpp" "CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o" "gcc" "CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o.d"
+  "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/thrust_vector_control.cpp" "CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o" "gcc" "CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o.d"
   )
 
 # Targets to which this target links.

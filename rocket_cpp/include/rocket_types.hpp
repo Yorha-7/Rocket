@@ -19,6 +19,16 @@ struct RocketState {
     Eigen::Vector3d orientation;  // roll, pitch, yaw (rad)
     Eigen::Vector3d angular_vel;  // p, q, r (rad/s)
     double mass;                  // current vehicle mass (kg)
+
+    // Where the TVC nozzle actually is right now (not where it's commanded
+    // to be -- the actuator lags, see ThrustVectorControl). Stored on the
+    // state itself, not just inside RocketKinematics, so computeNetForce()
+    // stays a pure function of (state, thrust) -- recomputing it later for
+    // logging/plotting reads the SAME historical nozzle angle the
+    // integrator actually used at that instant, not whatever the live
+    // actuator has moved on to since.
+    double gimbal_pitch_rad = 0.0;  // deflects nozzle toward +X, body X-Z plane
+    double gimbal_yaw_rad = 0.0;    // deflects nozzle toward +Y, body Y-Z plane
 };
 
 // Air-relative conditions the aerodynamics model needs at one instant.
