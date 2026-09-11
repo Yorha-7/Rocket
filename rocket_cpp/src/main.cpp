@@ -131,7 +131,7 @@ int main() {
     // Navigation's MIN_TARGET_ALTITUDE_M ground-safety floor, and within
     // the kind of x/y range the TVC test sequence already showed this
     // vehicle's actuator authority can actually reach.
-    const Eigen::Vector3d NAV_TARGET(0.0, 600.0, 200.0);
+    const Eigen::Vector3d NAV_TARGET(300.0, 0.0, 500.0);
     Navigation navigation(NAV_TARGET);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
               << ", " << NAV_TARGET.z() << ") m -- guidance law: point the nose at it, TVC does the rest\n";
