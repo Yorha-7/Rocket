@@ -1,4 +1,5 @@
-#include "rocket_kinematics.hpp"
+#include "sim/rocket_kinematics.hpp"
+#include "gnc/sensors.hpp"
 #include <Eigen/Dense>
 #include <cmath>
 
@@ -14,7 +15,7 @@ RocketKinematics::RocketKinematics(const RocketParams& params, const SimulationC
 // the rocket's own axes (thrust) into forces in the world frame we
 // integrate position/velocity in -- e.g. a pitched-over rocket's thrust
 // should pick up a horizontal component, which this matrix now does.
-Eigen::Matrix3d RocketKinematics::rocketToNedFrame(const RocketState& state) const {
+Eigen::Matrix3d RocketKinematics::rocketToNedFrame(const RocketState& state) {
     double roll  = state.orientation(0);
     double pitch = state.orientation(1);
     double yaw   = state.orientation(2);
@@ -46,24 +47,32 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     fc.mach = velocity / aero_.getSpeedOfSound(altitude);
     fc.dynamic_pressure = 0.5 * aero_.getDensity(altitude) * velocity * velocity;
 
-    // True angle of attack: pitch minus the flight-path angle (the
-    // direction the rocket is actually moving), not just pitch alone.
-    // At v=0 (pad, or an apogee-of-apogee stall) atan2(0,0)=0, so this
-    // reduces to alpha=pitch -- matching the old approximation exactly
-    // at the moment it was valid. Once airborne, this is what lets the
-    // aero moment relax to zero as the body trims out along its actual
-    // velocity vector, instead of always fighting to point at vertical.
+    // Real angle of attack (alpha) and sideslip (beta): the angle between
+    // the body's own nose axis and its actual velocity, decomposed into
+    // the pitch plane (alpha) and yaw plane (beta). Computed by rotating
+    // velocity into BODY frame rather than assuming it stays in some
+    // fixed plane -- that assumption held back when yaw was always
+    // static and nothing could push velocity sideways out of it, but TVC
+    // can now steer independently in both planes, so alpha/beta need to
+    // be exact regardless of where the velocity vector actually points.
+    // At v=0 (pad, or a momentary stall) both come out 0, same as before.
     //
-    // Horizontal velocity is projected onto the fixed launch-azimuth
-    // (yaw) plane rather than just using vx: yaw never changes during
-    // flight (no yaw torque model yet), so the whole trajectory stays
-    // in that one vertical plane, and this projection is exact -- not
-    // an extra approximation on top of the near-vertical one below.
-    double yaw = state.orientation(2);
-    double v_horizontal = state.velocity(0) * cos(yaw) + state.velocity(1) * sin(yaw);
-    double flight_path_angle = atan2(v_horizontal, state.velocity(2));
-    fc.alpha = state.orientation(1) - flight_path_angle;
-    fc.beta = 0.0;
+    // Negated (atan2(-x,z), not atan2(x,z)): alpha needs to be POSITIVE
+    // when the nose leads the velocity vector (so the restoring torque
+    // -Cn_alpha*alpha*d comes out negative and pulls the nose back) --
+    // verified against the old, already-correct single-plane formula on
+    // a concrete case (nose tipped +10deg, purely vertical velocity
+    // should give alpha=+10deg). The un-negated form gives exactly the
+    // opposite sign, which is what made pitch run away to the clamp
+    // instead of settling the first time this was written.
+    Eigen::Vector3d v_body = rocketToNedFrame(state).transpose() * state.velocity;
+    if (velocity > 1e-6) {
+        fc.alpha = atan2(-v_body.x(), v_body.z());  // body X-Z plane, vs. nose axis (Z)
+        fc.beta = atan2(-v_body.y(), v_body.z());   // body Y-Z plane, vs. nose axis (Z)
+    } else {
+        fc.alpha = 0.0;
+        fc.beta = 0.0;
+    }
     fc.roll_rate = state.angular_vel(0);
     fc.pitch_rate = state.angular_vel(1);
     fc.yaw_rate = state.angular_vel(2);
@@ -132,11 +141,11 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
     next.position = state.position + next.velocity * config_.dt;
 
     updatePitchDynamics(next, state);
+    updateYawDynamics(next, state);
 
-    // Roll and yaw have no torque model yet (see README "Staging Notes" /
-    // 6DOF roadmap) — just keep the angles bounded.
+    // Roll still has no torque model (see README "Staging Notes" / 6DOF
+    // roadmap) -- just keep the angle bounded.
     next.orientation(0) = fmod(state.orientation(0), 2*M_PI);
-    next.orientation(2) = fmod(state.orientation(2), 2*M_PI);
 
     // Now advance the actuator toward its (possibly just-changed) target,
     // and bake the result into next -- this is what computeNetForce will
@@ -149,7 +158,8 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
 }
 
 std::vector<RocketState> RocketKinematics::simulate(double time, const FlightData& flight_data,
-                                                    const std::vector<Eigen::Vector3d>& tvc_targets) {
+                                                    const std::vector<Eigen::Vector3d>& tvc_targets,
+                                                    Navigation* navigation) {
     int n_steps = static_cast<int>(time / config_.dt);
     if (n_steps >= (int)flight_data.time.size()) {
         n_steps = flight_data.time.size() - 1;
@@ -169,11 +179,27 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
     states[0] = initial;
 
     const Eigen::Vector3d no_deflection(0, 0, 1);
+    sensors::Gps nav_gps;
+    sensors::Gyro nav_gyro;
 
     for (int i = 0; i < n_steps; ++i) {
         double thrust = flight_data.thrust[i];
         double mass_kg = gramsToKg(flight_data.mass[i]);
-        const Eigen::Vector3d& tvc_target = (i < (int)tvc_targets.size()) ? tvc_targets[i] : no_deflection;
+
+        Eigen::Vector3d tvc_target;
+        if (navigation != nullptr) {
+            // Guidance reads the state THIS step starts from -- same
+            // "read the truth, no lookahead" rule everything else here
+            // follows. angular_vel(0)==0 for i==0, so using states[i]
+            // as its own "previous" state there just gives Gyro a
+            // harmless zero angular-acceleration reading at t=0.
+            nav_gps.update(states[i]);
+            const RocketState& prev = (i > 0) ? states[i - 1] : states[i];
+            nav_gyro.update(states[i], prev, config_.dt);
+            tvc_target = navigation->computeTvcTarget(nav_gps, nav_gyro);
+        } else {
+            tvc_target = (i < (int)tvc_targets.size()) ? tvc_targets[i] : no_deflection;
+        }
 
         RocketState temp = states[i];
         temp.mass = mass_kg;

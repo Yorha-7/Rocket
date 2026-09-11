@@ -15,27 +15,39 @@ pkg_check_modules(TINYXML2 REQUIRED IMPORTED_TARGET tinyxml2)
 
 add_executable(rocket_cpp
     src/main.cpp
-    src/rocket_kinematics.cpp
-    src/pitch_dynamics.cpp
-    src/aerodynamics.cpp
-    src/atmosphere.cpp
-    src/mass_properties_model.cpp
-    src/ork_archive.cpp
-    src/ork_geometry.cpp
-    src/ork_flightdata.cpp
-    src/ork_mass_components.cpp
-    src/ork_loader.cpp
-    src/thrust_vector_control.cpp
-    include/rocket_types.hpp
-    include/rocket_kinematics.hpp
-    include/aerodynamics.hpp
-    include/mass_properties_model.hpp
-    include/ork_archive.hpp
-    include/ork_geometry.hpp
-    include/ork_flightdata.hpp
-    include/ork_mass_components.hpp
-    include/ork_loader.hpp
-    include/thrust_vector_control.hpp
+
+    # sim -- the physics engine (ground-truth simulation)
+    src/sim/rocket_kinematics.cpp
+    src/sim/pitch_dynamics.cpp
+    src/sim/yaw_dynamics.cpp
+    src/sim/aerodynamics.cpp
+    src/sim/atmosphere.cpp
+    src/sim/mass_properties_model.cpp
+    include/sim/rocket_types.hpp
+    include/sim/rocket_kinematics.hpp
+    include/sim/aerodynamics.hpp
+    include/sim/mass_properties_model.hpp
+
+    # ork -- rocket-parameter extraction from OpenRocket .ork design files
+    src/ork/ork_archive.cpp
+    src/ork/ork_geometry.cpp
+    src/ork/ork_flightdata.cpp
+    src/ork/ork_mass_components.cpp
+    src/ork/ork_loader.cpp
+    include/ork/ork_archive.hpp
+    include/ork/ork_geometry.hpp
+    include/ork/ork_flightdata.hpp
+    include/ork/ork_mass_components.hpp
+    include/ork/ork_loader.hpp
+
+    # gnc -- Guidance/Navigation/Control: the "flight computer" stack
+    # (sensors feed Navigation, which decides direction; TVC executes it)
+    src/gnc/thrust_vector_control.cpp
+    src/gnc/sensors.cpp
+    src/gnc/navigation.cpp
+    include/gnc/thrust_vector_control.hpp
+    include/gnc/sensors.hpp
+    include/gnc/navigation.hpp
 )
 
 target_include_directories(rocket_cpp PRIVATE include)

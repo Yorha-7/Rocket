@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rocket_types.hpp"
+#include "sim/rocket_types.hpp"
 
 // Computes drag/normal-force coefficients and the center of pressure from
 // the vehicle's own geometry (Barrowman method) -- nothing here is read

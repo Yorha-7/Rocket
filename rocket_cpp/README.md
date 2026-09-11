@@ -21,6 +21,12 @@ interactive 3D viewer (`scripts/trajectory.py`) is also available on demand.
 - Time-varying CP/CG/inertia and Barrowman aerodynamic coefficients,
   computed from the vehicle's own geometry every step (not flight-averaged
   constants, not read from OpenRocket's own solved simulation).
+- **Thrust vector control**: a two-axis gimbal actuator (first-order lag,
+  travel-limited) that genuinely deflects thrust direction each step — see
+  [Thrust Vector Control](#thrust-vector-control).
+- **Closed-loop guidance**: `Navigation` reads simulated `Gps`/`Gyro`
+  sensors and steers TVC to point the nose at a fixed target — see
+  [Sensors & Navigation](#sensors--navigation).
 - Ground-contact termination with exact linear-interpolated impact point.
 
 > **This directory is a staging area.** Not everything in `include/`/`src/`
@@ -35,42 +41,47 @@ One class, split across a few `.cpp` files by responsibility (each under
 
 ```
 rocket_cpp/
-├── include/
+├── include/sim/
 │   ├── rocket_types.hpp        Shared plain-data structs: RocketState,
 │   │                           RocketParams, SimulationConfig, FlightData,
 │   │                           MassProperties, FlightConditions,
 │   │                           AerodynamicCoefficients.
 │   └── rocket_kinematics.hpp   The RocketKinematics class declaration —
 │                               the only header a caller needs.
-└── src/
+└── src/sim/
     ├── rocket_kinematics.cpp   Translational motion + top-level loop.
-    └── pitch_dynamics.cpp      Pitch-axis torque model.
+    ├── pitch_dynamics.cpp      Pitch-axis torque model.
+    └── yaw_dynamics.cpp        Yaw-axis torque model (exact mirror of pitch).
 ```
 
-To reuse just the physics elsewhere: take those files + `aerodynamics.*`/
-`atmosphere.cpp`/`mass_properties_model.*` below + Eigen, construct
-`RocketKinematics(params, config, mass_components)`, and call `simulate()`
-or `step()`.
+To reuse just the physics elsewhere: take everything under `sim/` +
+`ork/ork_mass_components.*` (needed by `VehicleMassModel`) + Eigen,
+construct `RocketKinematics(params, config, mass_components)`, and call
+`simulate()` or `step()`. (`gnc/` is only needed if you also want TVC/
+closed-loop guidance driving thrust direction — see
+[Thrust Vector Control](#thrust-vector-control) and
+[Sensors & Navigation](#sensors--navigation).)
 
 ### `RocketKinematics` method reference
 
 | Method | File | Purpose |
 |---|---|---|
-| `RocketKinematics(params, config, mass_components)` | rocket_kinematics.cpp | ctor — builds the `AerodynamicsModel`/`VehicleMassModel`, caches Barrowman CP |
-| `step(state, thrust)` | rocket_kinematics.cpp | **public** — advance one `dt`; `state.mass` is this instant's mass |
-| `simulate(time, flight_data)` | rocket_kinematics.cpp | **public** — run full flight, one `step()` per sample |
-| `getParams()` / `getConfig()` | rocket_kinematics.hpp | **public** — accessors |
-| `computeNetForce(state, thrust)` | rocket_kinematics.cpp | **public** — thrust + drag (our own Cd) + gravity, world frame, undivided by mass |
-| `computePitchTorques(state)` | pitch_dynamics.cpp | **public** — gravity(=0)/aero/damping torque breakdown, for logging (not used by `step()` itself) |
-| `computeAcceleration()` | rocket_kinematics.cpp | `computeNetForce() / mass` |
-| `rocketToNedFrame()` | rocket_kinematics.cpp | body → world rotation matrix |
-| `buildFlightConditions()` | rocket_kinematics.cpp | state → `FlightConditions` — real angle of attack (pitch minus flight-path angle, not raw pitch), mach, altitude... for the aero model |
-| `computeGravityTorque()` | pitch_dynamics.cpp | always `0.0` — gravity has no net torque about a body's own CG (deliberate stub, see below) |
-| `computeAerodynamicMoment()` | pitch_dynamics.cpp | aero restoring moment (reads `Cn_alpha` from `AerodynamicsModel`) |
-| `computeDampingTorque()` | pitch_dynamics.cpp | resists rotation |
-| `computeTotalPitchTorque()` | pitch_dynamics.cpp | sums the 3 torques above |
-| `computePitchAcceleration()` | pitch_dynamics.cpp | torque ÷ I_yy, clamped |
-| `updatePitchDynamics()` | pitch_dynamics.cpp | builds `MassProperties` from `VehicleMassModel` + cached CP, then integrates |
+| `RocketKinematics(params, config, mass_components)` | sim/rocket_kinematics.cpp | ctor — builds the `AerodynamicsModel`/`VehicleMassModel`, caches Barrowman CP |
+| `step(state, thrust, tvc_target_dir=(0,0,1))` | sim/rocket_kinematics.cpp | **public** — advance one `dt`; `state.mass` is this instant's mass; commands TVC toward `tvc_target_dir` and bakes the actuator's new position into the returned state. Not `const` — advancing TVC is real state change; must be called in sequence. |
+| `simulate(time, flight_data, tvc_targets={}, navigation=nullptr)` | sim/rocket_kinematics.cpp | **public** — run full flight, one `step()` per sample. `navigation`, if given, overrides `tvc_targets` and drives TVC closed-loop each step (see [Sensors & Navigation](#sensors--navigation)) |
+| `getParams()` / `getConfig()` | sim/rocket_kinematics.hpp | **public** — accessors |
+| `computeNetForce(state, thrust)` | sim/rocket_kinematics.cpp | **public** — thrust (along the TVC-deflected nozzle direction stored in `state`) + drag (our own Cd) + gravity, world frame, undivided by mass |
+| `computePitchTorques(state)` | sim/pitch_dynamics.cpp | **public** — gravity(=0)/aero/damping torque breakdown, for logging (not used by `step()` itself) |
+| `computeYawTorques(state)` | sim/yaw_dynamics.cpp | **public** — same breakdown, yaw axis |
+| `rocketToNedFrame(state)` | sim/rocket_kinematics.cpp | **public, static** — body → world rotation matrix; a pure function of orientation, reused as-is by `Sensors`/`Navigation` instead of a second hand-copied DCM |
+| `computeAcceleration()` | sim/rocket_kinematics.cpp | `computeNetForce() / mass` |
+| `buildFlightConditions()` | sim/rocket_kinematics.cpp | state → `FlightConditions` — real angle of attack (α) and sideslip (β), both from velocity rotated into body frame, not a raw-angle approximation; mach, altitude... for the aero model |
+| `computeGravityTorque()` / `computeYawGravityTorque()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | always `0.0` — gravity has no net torque about a body's own CG (deliberate stub, see below) |
+| `computeAerodynamicMoment()` / `computeYawAeroMoment()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | aero restoring moment (reads `Cn_alpha` from `AerodynamicsModel`) |
+| `computeDampingTorque()` / `computeYawDampingTorque()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | resists rotation |
+| `computeTotalPitchTorque()` / `computeTotalYawTorque()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | sums the 3 torques above |
+| `computePitchAcceleration()` / `computeYawAcceleration()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | torque ÷ inertia, clamped |
+| `updatePitchDynamics()` / `updateYawDynamics()` | sim/pitch_dynamics.cpp / sim/yaw_dynamics.cpp | builds `MassProperties` from `VehicleMassModel` + cached CP, then integrates |
 
 ## Aerodynamics & mass properties (Barrowman method)
 
@@ -79,10 +90,10 @@ nothing here is read from OpenRocket's solved simulation.
 
 ```
 rocket_cpp/
-├── include/
+├── include/sim/
 │   ├── aerodynamics.hpp            AerodynamicsModel
 │   └── mass_properties_model.hpp   VehicleMassModel
-└── src/
+└── src/sim/
     ├── aerodynamics.cpp        computeCoefficients() dispatcher, body/fin
     │                           Cd/Cn_alpha/Cm_alpha, base/boat-tail drag,
     │                           body-fin interference, Barrowman CP.
@@ -100,35 +111,116 @@ rocket_cpp/
 
 | Method | File | Purpose |
 |---|---|---|
-| `computeCoefficients(fc)` | aerodynamics.cpp | **public** — Cd/Cn/Ca/Cm/Cn_alpha/Cm_alpha at one flight condition |
-| `computeCenterOfPressure()` | aerodynamics.cpp | **public** — Barrowman CP, cm from nose tip (geometry-only, Mach-independent) |
-| `getDensity()` / `getSpeedOfSound()` | atmosphere.cpp | **public** — shared with `RocketKinematics`, one atmosphere model for the whole sim |
-| `computeBodyCnAlpha()` / `computeFinCnAlpha()` | aerodynamics.cpp | Barrowman normal-force slopes (body = 2/rad; fins via span/chord/sweep + Kfb interference) |
-| `computeNoseCp()` / `computeFinCp()` | aerodynamics.cpp | geometric CP of each contributor |
-| `computeFrictionDrag()` / `computeSkinFrictionCf()` | atmosphere.cpp | wetted-area friction drag (Blasius/Schlichting + roughness limit) |
-| `computeBaseDrag()` / `computeBoatTailDrag()` | aerodynamics.cpp | blunt-base and boat-tail pressure drag |
-| `VehicleMassModel(components, ...)` | mass_properties_model.cpp | ctor — dry mass/CG/I_yy from the component list |
-| `computeAt(total_mass_kg)` | mass_properties_model.cpp | **public** — splits total mass into (dry structure, fixed) + (motor, = total − dry) → CG(t)/I_yy(t) |
+| `computeCoefficients(fc)` | sim/aerodynamics.cpp | **public** — Cd/Cn/Ca/Cm/Cn_alpha/Cm_alpha at one flight condition |
+| `computeCenterOfPressure()` | sim/aerodynamics.cpp | **public** — Barrowman CP, cm from nose tip (geometry-only, Mach-independent) |
+| `getDensity()` / `getSpeedOfSound()` | sim/atmosphere.cpp | **public** — shared with `RocketKinematics`, one atmosphere model for the whole sim |
+| `computeBodyCnAlpha()` / `computeFinCnAlpha()` | sim/aerodynamics.cpp | Barrowman normal-force slopes (body = 2/rad; fins via span/chord/sweep + Kfb interference) |
+| `computeNoseCp()` / `computeFinCp()` | sim/aerodynamics.cpp | geometric CP of each contributor |
+| `computeFrictionDrag()` / `computeSkinFrictionCf()` | sim/atmosphere.cpp | wetted-area friction drag (Blasius/Schlichting + roughness limit) |
+| `computeBaseDrag()` / `computeBoatTailDrag()` | sim/aerodynamics.cpp | blunt-base and boat-tail pressure drag |
+| `VehicleMassModel(components, ...)` | sim/mass_properties_model.cpp | ctor — dry mass/CG/I_yy from the component list |
+| `computeAt(total_mass_kg)` | sim/mass_properties_model.cpp | **public** — splits total mass into (dry structure, fixed) + (motor, = total − dry) → CG(t)/I_yy(t) |
+
+## Thrust Vector Control
+
+```
+rocket_cpp/
+├── include/gnc/
+│   └── thrust_vector_control.hpp   ThrustVectorControl
+└── src/gnc/
+    └── thrust_vector_control.cpp   Target decomposition, first-order lag,
+                                     nozzle/force geometry.
+```
+
+Simulates the physical gimbal hardware, not a perfect instant aim command:
+two independent servos tip the nozzle off its neutral (straight-back, body
+**−Z**) position — one in the body X-Z plane (`gimbal_pitch`), one in the
+body Y-Z plane (`gimbal_yaw`) — each a first-order lag (`τ=0.05s`, settles
+~99% in ~0.25s) clamped to a `±12°` physical travel limit, both hardcoded
+constants in the class (no config file yet). `RocketState` carries the
+actuator's actual position (`gimbal_pitch_rad`/`gimbal_yaw_rad`) so
+`computeNetForce()` stays a pure function of `(state, thrust)` — it rebuilds
+the nozzle direction from `state`'s own stored angles, never from the live
+`ThrustVectorControl` object, so recomputing it later for logging reads the
+same historical deflection the integrator actually used at that instant.
+
+| Method | Purpose |
+|---|---|
+| `commandForceDirection(dir)` | **public** — aim so the FORCE ends up along `dir` (body frame): inverts to a nozzle target (Newton's 3rd law), decomposes into `gimbal_pitch`/`gimbal_yaw`, clamps each to `±12°`. Only sets the target — doesn't move anything |
+| `step(dt)` | **public** — advance both actuators one `dt` toward their targets (first-order lag) |
+| `currentNozzleDirection()` | **public** — unit vector, body frame, where the nozzle actually is right now |
+| `currentForce(thrust)` | **public** — `-thrust * currentNozzleDirection()`; what `computeNetForce()` uses |
+| `currentGimbalPitchRad()` / `currentGimbalYawRad()` | **public** — actuator angles, radians (what gets baked into `RocketState`) |
+| `currentGimbalPitchDeg()` / `currentGimbalYawDeg()`, `targetGimbalPitchDeg()` / `targetGimbalYawDeg()` | **public** — same, degrees, plus the (unlagged) targets, for logging/plotting |
+| `nozzleDirectionFromAngles(gx, gy)` | **public, static** — the nozzle-geometry formula itself, shared by `currentNozzleDirection()` and by `computeNetForce()` rebuilding it from a `RocketState` |
+
+## Sensors & Navigation
+
+```
+rocket_cpp/
+├── include/gnc/
+│   ├── sensors.hpp      namespace sensors { Gyro, Baro, Gps }
+│   └── navigation.hpp   Navigation
+└── src/gnc/
+    ├── sensors.cpp
+    └── navigation.cpp
+```
+
+Simulated flight-computer sensors, each reading straight from the true
+`RocketState` — no noise/bias/drift modeled yet, just the `update()` then
+`read...()` shape real sensor drivers use. One class per physical sensor
+(mirrors a real flight computer's separate parts), namespaced under
+`sensors` rather than one do-everything class:
+
+| Class | Method | Purpose |
+|---|---|---|
+| `sensors::Gyro` | `update(state, prev_state, dt)` | computes proper (specific) acceleration — total minus gravity, since an accelerometer's proof mass doesn't feel gravity — and angular acceleration, both body frame |
+| | `readAccel()` / `readAngularAccel()` | m/s², rad/s² |
+| | `readOrientation()` | true `(roll,pitch,yaw)` passthrough — a stand-in for real attitude estimation (gyro/accel fusion), not built yet |
+| `sensors::Baro` | `update(state)`, `readPressure()`, `readAltitude()` | ISA pressure at true altitude; derived altitude matches true altitude exactly since no sensor error is modeled yet |
+| `sensors::Gps` | `update(state)`, `readPosition()` | world-frame position fix |
+
+`Navigation` is the classic, deliberately un-smart guidance law: **point
+the nose at a fixed target**, no PID, no trajectory optimization.
+`ThrustVectorControl`'s own actuator lag is the only closed-loop dynamics
+involved — stacking a second controller on top would compound lag on lag
+and slow the response down, not help it.
+
+| Method | Purpose |
+|---|---|
+| `Navigation(target_position)` | ctor — world-frame aim point, fixed for the flight (hardcoded by the caller, e.g. `main.cpp`'s `NAV_TARGET`; no in-flight retargeting yet). **Throws `std::invalid_argument`** if `target_position.z() <= 10.0` — not an "out of bounds" check, aiming the nose (and thrust) at/into the ground is unsurvivable regardless of how "in range" the coordinates look |
+| `computeTvcTarget(gps, gyro)` | **public** — `target − gps.readPosition()` (world frame), rotated into body frame via `RocketKinematics::rocketToNedFrame(gyro.readOrientation())`. Stateless — no integral term, no memory between calls |
+
+Plugs into `RocketKinematics::simulate(time, flight_data, {}, &navigation)`
+— see the method reference above. `main.cpp` writes the target into
+`rocket_trajectory.csv` (`target_x/y/z` columns) so `scripts/trajectory.py`
+can show whether it was actually reached (see
+[Visualize a trajectory](#visualize-a-trajectory)).
 
 ## OpenRocket ingestion (`.ork` → simulation inputs)
 
 ```
 rocket_cpp/
-├── include/
+├── include/ork/
 │   ├── ork_archive.hpp           readOrkXml(path) -> string
 │   ├── ork_geometry.hpp          parseOrkGeometry(xml) -> RocketParams
 │   ├── ork_flightdata.hpp        parseOrkFlightData(xml, dt, motor?) -> FlightData
 │   │                             parseOrkLaunchConditions(xml, motor?) -> SimulationConfig
 │   ├── ork_mass_components.hpp   parseOrkMassComponents(xml) -> vector<MassComponent>
 │   └── ork_loader.hpp            loadOrkRocket(path, dt, motor?) -> OrkRocket
-└── src/
+└── src/ork/
     ├── ork_archive.cpp         Unzips the .ork (it's a zip). (libzip)
     ├── ork_geometry.cpp        Walks <nosecone>/<bodytube>/<trapezoidfinset>
     │                           for RocketParams geometry + reference_area. (tinyxml2)
     ├── ork_flightdata.cpp      Picks the embedded <simulation> for the target
     │                           motor (default: config marked default="true"),
     │                           reads thrust/mass + launch conditions,
-    │                           resamples to uniform dt. (tinyxml2)
+    │                           resamples to uniform dt. Prefers a match that
+    │                           actually has flight data (a design can have
+    │                           multiple <simulation> entries for the same
+    │                           motor config -- a stale, never-run one and a
+    │                           real one -- picking blindly grabs whichever
+    │                           comes first in the file). (tinyxml2)
     ├── ork_mass_components.cpp Walks every structural part (nosecone, body
     │                           tube, fins, parachute, shock cord, wadding,
     │                           launch lug, centering rings, motor mount,
@@ -144,7 +236,7 @@ rocket_cpp/
 | `loadOrkRocket(path, dt, motor?)` | **entry point** — `main.cpp` calls only this one |
 | `readOrkXml(path)` | unzip `.ork` → design XML string |
 | `parseOrkGeometry(xml)` | XML → `RocketParams` (nose/body/fin geometry) |
-| `parseOrkFlightData(xml, dt, motor?)` | XML → `FlightData` (thrust, mass) |
+| `parseOrkFlightData(xml, dt, motor?)` | XML → `FlightData` (thrust, mass). Throws `std::runtime_error` if the matched `<simulation>` has no `<databranch>` at all — meaning that design was never actually run inside OpenRocket before saving; open it there, run the simulation, and re-save before pointing this loader at it. |
 | `parseOrkLaunchConditions(xml, motor?)` | XML → `SimulationConfig` (pad height, rod angle) |
 | `parseOrkMassComponents(xml)` | XML → structural component list, for `VehicleMassModel` |
 
@@ -197,9 +289,14 @@ There's no CLI yet — launch conditions are edited directly in `main.cpp`:
 | Launch tilt (pitch) | `INIT_TILT_OVERRIDE_DEG` in `main.cpp` | Degrees from vertical. Every simulation embedded in the `.ork` uses a dead-vertical rod (0°), so this override is what actually gives the pitch dynamics something to act on. |
 | Launch azimuth (yaw) | `INIT_YAW_OVERRIDE_DEG` in `main.cpp` | Degrees. Fixed for the whole flight (no yaw torque model) — see [Sign conventions](#sign-conventions) for how it combines with tilt. |
 | Integrator step size | `config.dt` | Smaller = more accurate but slower and a bigger CSV. |
-| Which motor config | `loadOrkRocket(path, dt, motor?)` (`ork_loader.hpp`) | Defaults to the `.ork`'s `default="true"` simulation; pass a motor name to pick another of the 5 embedded configs. |
+| Which motor config | `loadOrkRocket(path, dt, motor?)` (`ork/ork_loader.hpp`) | Defaults to the `.ork`'s `default="true"` simulation; pass a motor name to pick another of the 5 embedded configs. |
+| Navigation target | `NAV_TARGET` in `main.cpp` | World-frame point `Navigation` steers TVC toward (see [Sensors & Navigation](#sensors--navigation)). Must be `z > 10m` — anything on/near the ground throws at construction. |
+| TVC actuator limits/speed | `MAX_GIMBAL_DEG`, `TAU_PITCH_S`, `TAU_YAW_S` in `gnc/thrust_vector_control.hpp` | Hardcoded private constants, no config file yet. |
 
-Re-run `cmake --build build` after editing, then `./build/rocket_cpp` again.
+Re-run `cmake --build build` after editing, then `./build/rocket_cpp` again
+— **a source edit alone changes nothing on disk**: `rocket_trajectory.csv`
+(and anything reading it, like `trajectory.py`) still reflects the
+*previous* build until you rebuild and rerun.
 
 ### Visualize a trajectory
 
@@ -217,6 +314,27 @@ angles read honestly — see [Coordinate frames](#coordinate-frames--axis-conven
 for why that matters and what the alternative (a metrically "true to scale"
 box) actually looks like for a mostly-vertical flight.
 
+If the CSV has `target_x/y/z` columns (i.e. the run passed a `Navigation`
+to `simulate()`), the target is plotted as a purple star and a banner shows
+**green "SUCCESS"** (closest approach ≤ 20m) or **red "FAIL"** (closest
+approach over the whole flight, not just the final position — this is
+open-loop point-and-shoot guidance with no terminal intercept phase, so
+"did it ever get close" is the meaningful question, not "where did it end
+up after coasting past"). CSVs without those columns just skip this —
+older/non-guided runs don't error.
+
+### Plot the TVC command history
+
+```bash
+python3 scripts/tvc.py rocket_trajectory.csv   # defaults to this path if omitted
+```
+
+Opens a matplotlib window (same pattern as `trajectory.py`) with two
+stacked panels — `gimbal_pitch_deg` and `gimbal_yaw_deg` vs. time, one per
+actuator (see [Thrust Vector Control](#thrust-vector-control)) — so you can
+see each axis's command history independently: the first-order rise,
+whether/when it hit the `±12°` travel limit, and how long it held there.
+
 ## Coordinate frames & axis conventions
 
 ![Axis, orientation-angle and planned-TVC symbol reference](docs/axis_and_tvc_reference.png)
@@ -224,12 +342,14 @@ box) actually looks like for a mostly-vertical flight.
 Left: body vs. world frame and the pitch (θ)/yaw (ψ)/roll (φ) angles this
 sim actually uses, at an illustrative non-zero pose — every symbol maps to
 the `orientation(0..2)` index used in code, spelled out below. Right: the
-**planned** (not yet implemented) thrust-vector-control gimbal cone —
+thrust-vector-control gimbal cone (see [Thrust Vector Control](#thrust-vector-control)
+for the real, implemented `ThrustVectorControl` class this diagrams) —
 nozzle deflection is measured off the body **−Z** axis (nozzle-neutral,
 opposite the nose), and the resulting force on the vehicle (what feeds
 `computeNetForce()`) is the negation of that direction, per Newton's third
-law. Regenerate this image with `scripts/make_axis_diagram.py` if the axis
-convention ever changes.
+law. The diagram's `γ_max` is exaggerated to 20° for legibility — the
+actual `MAX_GIMBAL_DEG` is 12°. Regenerate this image with
+`scripts/make_axis_diagram.py` if the axis convention ever changes.
 
 ### World frame — labeled "NED", actually Z-up
 
@@ -347,9 +467,10 @@ burn — not a leftover bug).
 | `orientation` | (roll, pitch, yaw); only pitch evolves after `t=0` — yaw holds whatever `init_yaw` set it to, roll stays 0 | rad |
 | `angular_vel` | (p, q, r); only q (index 1) is dynamic | rad/s |
 | `mass` | current vehicle mass, overwritten each step from `FlightData` | kg |
+| `gimbal_pitch_rad`, `gimbal_yaw_rad` | TVC nozzle's actual (lagged) deflection this instant — see [Thrust Vector Control](#thrust-vector-control) | rad |
 
 `RocketParams` — what the rocket physically **is**, fixed for the whole
-flight (parsed by `ork_geometry.cpp`):
+flight (parsed by `ork/ork_geometry.cpp`):
 
 | Field | Meaning | Units |
 |---|---|---|
@@ -362,7 +483,7 @@ flight (parsed by `ork_geometry.cpp`):
 | `thrust_duration`, `max_thrust` | informational only — actual thrust comes from `FlightData` | s, N |
 
 `FlightData` — motor performance over time, resampled to a uniform `dt`
-(parsed by `ork_flightdata.cpp`; the one thing still read from the `.ork`,
+(parsed by `ork/ork_flightdata.cpp`; the one thing still read from the `.ork`,
 since there's no local motor database to derive a thrust curve from):
 
 | Field | Meaning | Units |
@@ -404,7 +525,7 @@ Troposphere (≤11 km): $T=T_0+L\cdot z$, $P=P_0(T/T_0)^{-g_0/(LR)}$; isothermal
 
 **Gravity**: $\vec F_g=(0,0,-mg_0)$. **Net accel**: $\vec a=(\vec F_T+\vec F_D+\vec F_g)/m$.
 
-### 3. Aerodynamic coefficients (Barrowman method, `aerodynamics.cpp`)
+### 3. Aerodynamic coefficients (Barrowman method, `sim/aerodynamics.cpp`)
 
 **Body normal-force slope** (a nose that fully transitions to the body diameter contributes exactly 2/rad, independent of shape/length — the classic Barrowman result), with Prandtl-Glauert compressibility:
 $$
@@ -423,15 +544,15 @@ $$
 
 **Drag** $C_d$ = body pressure (≈0 subsonic, pointed nose) + fin thickness drag + friction (Cf × wetted-area ratio, form-factor corrected) + base drag ($0.12+0.13M^2$, scaled by base/reference area) + boat-tail (0 here — no boat-tail) + wave drag (supersonic-only placeholder, unreachable below Mach 0.8).
 
-### 4. Mass properties (`mass_properties_model.cpp`)
+### 4. Mass properties (`sim/mass_properties_model.cpp`)
 
-CG is exact — mass-weighted average of every structural component's own CG (bulk: density×volume, surface: density×area, line: density×length; see the `ork_mass_components.cpp` tree above). Dry pitch inertia is parallel-axis (point mass per component) plus a rod correction for the body tube ($mL^2/12$, since it spans a large fraction of the vehicle's length):
+CG is exact — mass-weighted average of every structural component's own CG (bulk: density×volume, surface: density×area, line: density×length; see the `ork/ork_mass_components.cpp` tree above). Dry pitch inertia is parallel-axis (point mass per component) plus a rod correction for the body tube ($mL^2/12$, since it spans a large fraction of the vehicle's length):
 $$
 I_{yy,dry} = \sum_i m_i(x_i-x_{cg})^2 + \frac{m_{tube}L_{tube}^2}{12}
 $$
 At each instant, motor mass = `total_mass(t) − dry_mass` (fixed axial position = the motor mount tube's center); combined CG/I_yy follow from the same parallel-axis approach.
 
-### 5. Pitch dynamics (1DOF rotational, `pitch_dynamics.cpp`)
+### 5. Pitch dynamics (1DOF rotational, `sim/pitch_dynamics.cpp`)
 
 $d=(cp-cg)/100$, $\theta$=pitch, $q$=pitch rate. Angle of attack $\alpha$ is
 **not** raw pitch — it's pitch minus the actual flight-path angle $\gamma$
@@ -473,7 +594,10 @@ Running `./rocket_cpp` writes `rocket_trajectory.csv`
 (`time, x, y, height, velocity, pitch, ang_vel, ang_accel, fx, fy, fz,
 torque_gravity, torque_aero, torque_damping` — the last 6 are diagnostics
 recomputed via `RocketKinematics::computeNetForce()`/`computePitchTorques()`,
-not part of the integration itself) and invokes `scripts/plot_trajectory.py`,
+not part of the integration itself — plus `gimbal_pitch_deg, gimbal_yaw_deg`
+straight from each state's stored TVC actuator position, and `target_x,
+target_y, target_z` — constant every row, `NAV_TARGET` repeated, for
+`trajectory.py`'s success/fail check) and invokes `scripts/plot_trajectory.py`,
 producing this 8-panel figure, plus a second `rocket_trajectory.png` with
 X/Y/Z position each plotted against time in its own panel:
 
@@ -507,18 +631,34 @@ capability gap (see Staging Notes).
 1. **No parachute/recovery-device model.** The `.ork` design has one (see
    above) but nothing in this codebase reads its deploy altitude/CD or
    changes drag after apogee — descent is currently a bare-body freefall.
-2. **`rocket_kinematics.h` + `kinematics.c`** — parallel legacy C-ish path
-   (separate structs, adds a `normal_coeff` term). Not built, won't compile
-   (`Eigen::Matrixd` isn't a real type).
-3. **"NED" labeling is inaccurate** — see [Coordinate frames](#coordinate-frames--axis-conventions).
-4. **Roll/yaw are purely kinematic** — no torque model, no inertia coupling
-   (fin cant is parsed but unused). Yaw gets a real, static initial value
-   (`init_yaw`) that genuinely deflects the trajectory (see
-   [Coordinate frames](#coordinate-frames--axis-conventions)), but nothing
-   ever restores or evolves it in flight — no weathercocking in the yaw
-   plane the way pitch has. That, plus real air-relative β (sideslip; only
-   α is real now) and Euler-rate kinematics, is what's missing for true
-   6DOF.
-5. **`I_xx` (roll inertia) is a coarse thin-shell/point estimate** in
+2. **"NED" labeling is inaccurate** — see [Coordinate frames](#coordinate-frames--axis-conventions).
+3. **Roll is purely kinematic** — no torque model, no inertia coupling (fin
+   cant is parsed but unused). Yaw *does* now have a real torque model
+   (`sim/yaw_dynamics.cpp`, exact mirror of pitch's), so it's no longer purely
+   kinematic — but its aerodynamic damping is severely underdamped
+   (measured ζ≈0.003 against real flight data, vs. ζ=1 for critical
+   damping — the damping torque scales linearly with velocity while the
+   restoring moment scales with velocity², so their ratio stays this low
+   regardless of speed or altitude; not something that improves at some
+   flight phase), so once something excites real sideslip (e.g. TVC actively
+   steering in Y) yaw oscillates for most of the flight instead of
+   settling. Real air-relative α *and* β are both implemented now
+   (rotating velocity into body frame — see `buildFlightConditions()`
+   above); Euler-rate kinematics and roll dynamics are still what's
+   missing for true 6DOF.
+4. **`I_xx` (roll inertia) is a coarse thin-shell/point estimate** in
    `VehicleMassModel` — fine for now since nothing reads it (no roll torque
    model yet), but should be revisited before any roll dynamics are added.
+5. **Sensors have no error model.** `Gyro`/`Baro`/`Gps` read the true
+   `RocketState` directly — no noise, bias, drift, or update-rate limiting.
+   `Gyro::readOrientation()` in particular is a bigger simplification than
+   it looks: real IMUs don't give absolute attitude for free, that needs
+   integrating/fusing the rates (or a magnetometer, deliberately left out
+   — see `gnc/sensors.hpp`), which isn't built.
+6. **`Navigation` is genuinely open-loop "point and shoot"** — one fixed
+   target for the whole flight, no in-flight retargeting, no terminal
+   guidance phase, no PID (deliberately — see its class comment). It will
+   miss by a wide margin if the launch tilt points the vehicle far enough
+   off-target that TVC's `±12°` authority can't correct it in time (made
+   worse by #3's yaw damping) — expected behavior for this guidance law,
+   not a bug to fix by adding a smarter one without being asked.

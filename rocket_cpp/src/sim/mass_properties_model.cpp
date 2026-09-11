@@ -1,4 +1,4 @@
-#include "mass_properties_model.hpp"
+#include "sim/mass_properties_model.hpp"
 #include <algorithm>
 
 namespace {

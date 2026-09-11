@@ -1,4 +1,4 @@
-#include "rocket_kinematics.hpp"
+#include "sim/rocket_kinematics.hpp"
 #include <Eigen/Dense>
 #include <cmath>
 #include <algorithm>
