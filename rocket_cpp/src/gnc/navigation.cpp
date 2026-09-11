@@ -1,6 +1,8 @@
 #include "gnc/navigation.hpp"
 #include "sim/rocket_kinematics.hpp"
 #include <stdexcept>
+#include <algorithm>
+#include <cmath>
 
 Navigation::Navigation(const Eigen::Vector3d& target_position) : target_position_(target_position) {
     if (target_position.z() <= MIN_TARGET_ALTITUDE_M) {
@@ -13,7 +15,7 @@ Navigation::Navigation(const Eigen::Vector3d& target_position) : target_position
     }
 }
 
-Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro) const {
+Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro, double dt) {
     // Straight-line vector from where GPS says we are to the target,
     // still in world frame (north/east/up) at this point.
     Eigen::Vector3d to_target_world = target_position_ - gps.readPosition();
@@ -36,7 +38,51 @@ Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sens
     Eigen::Matrix3d R = RocketKinematics::rocketToNedFrame(orientation_state);
 
     // R rotates body->world, so its transpose (= inverse, R is a pure
-    // rotation) takes our world-frame aim vector into body frame, which
-    // is what commandForceDirection() expects.
-    return R.transpose() * to_target_world;
+    // rotation) takes our world-frame aim vector into body frame.
+    Eigen::Vector3d dir_body = (R.transpose() * to_target_world).normalized();
+
+    // Decompose into per-axis angular error, same asin geometry
+    // ThrustVectorControl uses internally (nozzle deflection vs. force
+    // direction) -- applied here to the TARGET direction itself, i.e.
+    // how far off dead-ahead (body +Z, the nose) the target currently
+    // sits, split into the pitch plane (X-Z) and yaw plane (Y-Z).
+    double err_pitch = std::asin(std::max(-1.0, std::min(1.0, dir_body.x())));
+    double cos_p = std::cos(err_pitch);
+    double err_yaw = (std::abs(cos_p) > 1e-6)
+        ? std::asin(std::max(-1.0, std::min(1.0, dir_body.y() / cos_p)))
+        : 0.0;
+
+    // Integral: accumulate error over time, clamped so a long saturated
+    // stretch can't build up more windup than one actuator swing is
+    // worth (see MAX_GIMBAL_RAD's declaration comment).
+    integral_pitch_ += err_pitch * dt;
+    integral_yaw_ += err_yaw * dt;
+    double max_integral = (KI > 1e-9) ? (MAX_GIMBAL_RAD / KI) : 0.0;
+    if (KI > 1e-9) {
+        integral_pitch_ = std::max(-max_integral, std::min(max_integral, integral_pitch_));
+        integral_yaw_ = std::max(-max_integral, std::min(max_integral, integral_yaw_));
+    }
+
+    // Derivative: straight from the gyro's own rate reading, not a
+    // differentiated (noisy) error -- see class doc comment. Sign is
+    // negative because increasing pitch/yaw rate in the direction that
+    // CLOSES the error should reduce the command (anticipatory braking,
+    // not fighting the correction that's already happening).
+    Eigen::Vector3d rate = gyro.readAngularVel();
+    double d_pitch = -rate.y();
+    double d_yaw = -rate.z();
+
+    double u_pitch = KP * err_pitch + KI * integral_pitch_ + KD * d_pitch;
+    double u_yaw = KP * err_yaw + KI * integral_yaw_ + KD * d_yaw;
+
+    // Reconstruct a direction vector from the PID-shaped angles, using
+    // the exact inverse of the decomposition above -- with KP=1, KI=KD=0
+    // this round-trips to precisely dir_body, i.e. the old direct-
+    // passthrough behavior. ThrustVectorControl::commandForceDirection
+    // re-normalizes and re-decomposes this on the other end (and clamps
+    // to the actuator's own physical travel limit) -- this class doesn't
+    // need to duplicate that clamp, just hand over the shaped direction.
+    double su = std::sin(u_pitch), cu = std::cos(u_pitch);
+    double sy = std::sin(u_yaw), cy = std::cos(u_yaw);
+    return Eigen::Vector3d(su, cu * sy, cu * cy);
 }

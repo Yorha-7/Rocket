@@ -196,7 +196,7 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
             nav_gps.update(states[i]);
             const RocketState& prev = (i > 0) ? states[i - 1] : states[i];
             nav_gyro.update(states[i], prev, config_.dt);
-            tvc_target = navigation->computeTvcTarget(nav_gps, nav_gyro);
+            tvc_target = navigation->computeTvcTarget(nav_gps, nav_gyro, config_.dt);
         } else {
             tvc_target = (i < (int)tvc_targets.size()) ? tvc_targets[i] : no_deflection;
         }

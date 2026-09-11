@@ -63,7 +63,7 @@ public:
 
 private:
     // ---- Tuned here directly -- no config file for now ----
-    static constexpr double MAX_GIMBAL_DEG = 12.0;  // physical travel limit, each axis
+    static constexpr double MAX_GIMBAL_DEG = 30.0;  // physical travel limit, each axis
     // A first-order lag settles (~99%) after about 5*tau, so 0.05s here
     // lands the actuator on target inside the 250ms requirement (~99% by
     // 5*0.05=0.25s, ~95% already by 3*0.05=0.15s).

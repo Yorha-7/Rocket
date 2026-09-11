@@ -29,6 +29,7 @@ void Gyro::update(const RocketState& state, const RocketState& prev_state, doubl
         angular_accel_ = (state.angular_vel - prev_state.angular_vel) / dt;
     }
 
+    angular_vel_ = state.angular_vel;
     orientation_ = state.orientation;
 }
 

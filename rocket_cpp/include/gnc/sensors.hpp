@@ -33,6 +33,12 @@ public:
     // angular_vel between the two states), rad/s^2.
     Eigen::Vector3d readAngularAccel() const { return angular_accel_; }
 
+    // Angular rate (p, q, r), body frame, rad/s -- what a gyroscope
+    // actually measures directly (unlike accel/angular-accel above, no
+    // finite difference needed: rate is already a first-derivative
+    // quantity RocketState carries natively).
+    Eigen::Vector3d readAngularVel() const { return angular_vel_; }
+
     // True orientation (roll, pitch, yaw), rad -- a real IMU doesn't hand
     // you absolute attitude for free, that takes integrating/fusing the
     // rates above (or a magnetometer/star tracker). That estimator isn't
@@ -43,6 +49,7 @@ public:
 private:
     Eigen::Vector3d accel_body_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d angular_accel_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d angular_vel_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d orientation_ = Eigen::Vector3d::Zero();
 };
 
