@@ -1,18 +1,20 @@
 #pragma once
 
-#include "rocket_types.hpp"
-#include "aerodynamics.hpp"
-#include "mass_properties_model.hpp"
-#include "ork_mass_components.hpp"
-#include "thrust_vector_control.hpp"
+#include "sim/rocket_types.hpp"
+#include "sim/aerodynamics.hpp"
+#include "sim/mass_properties_model.hpp"
+#include "ork/ork_mass_components.hpp"
+#include "gnc/thrust_vector_control.hpp"
+#include "gnc/navigation.hpp"
 #include <vector>
 
 // The physics engine: turns a thrust/mass history into a full trajectory,
 // computing its own drag/normal-force coefficients (AerodynamicsModel) and
 // its own mass properties (VehicleMassModel) from the vehicle's geometry
 // at every step -- nothing is read from a pre-solved simulation. Methods
-// split across rocket_kinematics.cpp (translation + top-level loop) and
-// pitch_dynamics.cpp (pitch-axis torque model).
+// split across rocket_kinematics.cpp (translation + top-level loop),
+// pitch_dynamics.cpp (pitch-axis torque model), and yaw_dynamics.cpp
+// (yaw-axis torque model -- the exact mirror of pitch, one plane over).
 class RocketKinematics {
 public:
     RocketKinematics(const RocketParams& params, const SimulationConfig& config,
@@ -40,8 +42,16 @@ public:
     // contact. tvc_targets is an optional per-step TVC command (same
     // indexing as flight_data); shorter than the flight, or omitted
     // entirely, and the remaining/all steps command no deflection.
+    //
+    // If navigation is non-null, it OVERRIDES tvc_targets: each step,
+    // fresh Gps/Gyro readings are built from the state that step just
+    // produced and handed to navigation->computeTvcTarget() to get that
+    // step's command instead. This is the only place Navigation/Sensors
+    // touch the integrator -- computeNetForce/step themselves know
+    // nothing about guidance, only about whatever direction they're told.
     std::vector<RocketState> simulate(double time, const FlightData& flight_data,
-                                       const std::vector<Eigen::Vector3d>& tvc_targets = {});
+                                       const std::vector<Eigen::Vector3d>& tvc_targets = {},
+                                       Navigation* navigation = nullptr);
 
     // Return type is a const reference (a read-only alias to the member,
     // no copy made) -- cheap, but the caller can't modify config_/params_
@@ -55,11 +65,19 @@ public:
     // so main.cpp can log what actually drove each step.
     Eigen::Vector3d computeNetForce(const RocketState& state, double thrust) const;
     PitchTorques computePitchTorques(const RocketState& state) const;
+    YawTorques computeYawTorques(const RocketState& state) const;
+
+    // Body-to-world rotation matrix (see the .cpp for the actual DCM).
+    // Public and static -- it's a pure function of orientation, no
+    // instance state involved -- so Sensors/Navigation can reuse the
+    // exact same formula instead of a second hand-copied version drifting
+    // out of sync with this one (see README's cos(theta) bug history for
+    // why a second copy is worth avoiding).
+    static Eigen::Matrix3d rocketToNedFrame(const RocketState& state);
 
 private:
     // ---- Translational motion (rocket_kinematics.cpp) ----
     Eigen::Vector3d computeAcceleration(const RocketState& state, double thrust) const;
-    Eigen::Matrix3d rocketToNedFrame(const RocketState& state) const;
     FlightConditions buildFlightConditions(const RocketState& state) const;
 
     // ---- Pitch dynamics (pitch_dynamics.cpp) ----
@@ -69,6 +87,14 @@ private:
     double computeTotalPitchTorque(const RocketState& state, const MassProperties& mp) const;
     double computePitchAcceleration(double total_torque, const MassProperties& mp) const;
     void updatePitchDynamics(RocketState& next, const RocketState& state) const;
+
+    // ---- Yaw dynamics (yaw_dynamics.cpp) -- exact mirror of the above ----
+    double computeYawGravityTorque(const RocketState& state, const MassProperties& mp) const;
+    double computeYawAeroMoment(const RocketState& state, const MassProperties& mp) const;
+    double computeYawDampingTorque(const RocketState& state, const MassProperties& mp) const;
+    double computeTotalYawTorque(const RocketState& state, const MassProperties& mp) const;
+    double computeYawAcceleration(double total_torque, const MassProperties& mp) const;
+    void updateYawDynamics(RocketState& next, const RocketState& state) const;
 
     // These are stored by value (real, owned copies -- not references),
     // unlike AerodynamicsModel::params_ which stores a reference. That's

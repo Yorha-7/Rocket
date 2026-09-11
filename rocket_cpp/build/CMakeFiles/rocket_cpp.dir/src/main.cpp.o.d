@@ -1,8 +1,8 @@
 CMakeFiles/rocket_cpp.dir/src/main.cpp.o: \
  /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/main.cpp \
  /usr/include/stdc-predef.h \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/rocket_kinematics.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/rocket_types.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/sim/rocket_kinematics.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/sim/rocket_types.hpp \
  /usr/include/eigen3/Eigen/Dense /usr/include/eigen3/Eigen/Core \
  /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \
  /usr/include/eigen3/Eigen/src/Core/util/Macros.h \
@@ -401,11 +401,13 @@ CMakeFiles/rocket_cpp.dir/src/main.cpp.o: \
  /usr/include/eigen3/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/RealQZ.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/aerodynamics.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/mass_properties_model.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork_mass_components.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/thrust_vector_control.hpp \
- /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork_loader.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/sim/aerodynamics.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/sim/mass_properties_model.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork/ork_mass_components.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/gnc/thrust_vector_control.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/gnc/navigation.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/gnc/sensors.hpp \
+ /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/include/ork/ork_loader.hpp \
  /usr/include/c++/11/iostream /usr/include/c++/11/fstream \
  /usr/include/c++/11/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \

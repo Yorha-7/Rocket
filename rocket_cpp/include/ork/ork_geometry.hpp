@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rocket_types.hpp"
+#include "sim/rocket_types.hpp"
 #include <string>
 
 // Reads the fixed, physical shape of the rocket — nose cone, body tube,

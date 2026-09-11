@@ -1,4 +1,4 @@
-#include "ork_flightdata.hpp"
+#include "ork/ork_flightdata.hpp"
 #include <tinyxml2.h>
 #include <stdexcept>
 #include <sstream>
@@ -26,21 +26,38 @@ std::string findDefaultMotorConfigId(const XMLElement* rocket) {
     throw std::runtime_error("No motor configuration found in .ork file");
 }
 
-// The embedded simulation whose launch conditions were run with the
-// given motor configuration.
+// The embedded simulation whose launch conditions were run with the given
+// motor configuration. OpenRocket can save MULTIPLE <simulation> entries
+// for the same config id -- e.g. an old "loaded but never re-run" one
+// left over from before a rocket edit, sitting right next to the current
+// one that's actually been simulated. Picking the first match blindly
+// grabs whichever one happens to come first in the file, data or not; a
+// simulation only being useful here once it actually HAS flight data
+// (<flightdata><databranch>) is the real criterion, not just "first name
+// match". Falls back to the first match with no data if none have any,
+// so a genuinely never-simulated file still fails with the same honest
+// "no flight data" error as before -- this only changes behavior when a
+// good one actually exists among several candidates.
 const XMLElement* findSimulationForConfig(const XMLElement* root, const std::string& configid) {
     const XMLElement* simulations = root->FirstChildElement("simulations");
     if (!simulations) return nullptr;
 
+    const XMLElement* first_match = nullptr;
     for (const XMLElement* sim = simulations->FirstChildElement("simulation"); sim;
          sim = sim->NextSiblingElement("simulation")) {
         const XMLElement* conditions = sim->FirstChildElement("conditions");
         const XMLElement* id_elem = conditions ? conditions->FirstChildElement("configid") : nullptr;
-        if (id_elem && id_elem->GetText() && configid == id_elem->GetText()) {
-            return sim;
+        if (!id_elem || !id_elem->GetText() || configid != id_elem->GetText()) continue;
+
+        if (!first_match) first_match = sim;
+
+        const XMLElement* flightdata = sim->FirstChildElement("flightdata");
+        const XMLElement* databranch = flightdata ? flightdata->FirstChildElement("databranch") : nullptr;
+        if (databranch && databranch->Attribute("types")) {
+            return sim;  // has real data -- this is the one we want
         }
     }
-    return nullptr;
+    return first_match;
 }
 
 std::vector<std::string> splitCsv(const std::string& line) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rocket_types.hpp"
+#include "sim/rocket_types.hpp"
 #include <string>
 
 // Reads one flight's time history out of an OpenRocket design XML: the

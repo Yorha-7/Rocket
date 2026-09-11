@@ -83,195 +83,243 @@ CMakeFiles/rocket_cpp.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/main.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/main.cpp -o CMakeFiles/rocket_cpp.dir/src/main.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o: ../src/rocket_kinematics.cpp
-CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/rocket_kinematics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o: ../src/sim/rocket_kinematics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/rocket_kinematics.cpp
 
-CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/rocket_kinematics.cpp > CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/rocket_kinematics.cpp > CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/rocket_kinematics.cpp -o CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/rocket_kinematics.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o: ../src/pitch_dynamics.cpp
-CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/pitch_dynamics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o: ../src/sim/pitch_dynamics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/pitch_dynamics.cpp
 
-CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/pitch_dynamics.cpp > CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/pitch_dynamics.cpp > CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/pitch_dynamics.cpp -o CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/pitch_dynamics.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o: ../src/aerodynamics.cpp
-CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/aerodynamics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o: ../src/sim/yaw_dynamics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/yaw_dynamics.cpp
 
-CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/aerodynamics.cpp > CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/yaw_dynamics.cpp > CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/aerodynamics.cpp -o CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/yaw_dynamics.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o: ../src/atmosphere.cpp
-CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/atmosphere.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o: ../src/sim/aerodynamics.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/aerodynamics.cpp
 
-CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/atmosphere.cpp > CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/aerodynamics.cpp > CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/atmosphere.cpp -o CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/aerodynamics.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o: ../src/mass_properties_model.cpp
-CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/mass_properties_model.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o: ../src/sim/atmosphere.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/atmosphere.cpp
 
-CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/mass_properties_model.cpp > CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/atmosphere.cpp > CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/mass_properties_model.cpp -o CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/atmosphere.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o: ../src/ork_archive.cpp
-CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_archive.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o: ../src/sim/mass_properties_model.cpp
+CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/mass_properties_model.cpp
 
-CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_archive.cpp > CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.i
+CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/mass_properties_model.cpp > CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_archive.cpp -o CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.s
+CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/sim/mass_properties_model.cpp -o CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o: ../src/ork_geometry.cpp
-CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_geometry.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o: ../src/ork/ork_archive.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_archive.cpp
 
-CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_geometry.cpp > CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.i
+CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_archive.cpp > CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_geometry.cpp -o CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.s
+CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_archive.cpp -o CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o: ../src/ork_flightdata.cpp
-CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_flightdata.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o: ../src/ork/ork_geometry.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_geometry.cpp
 
-CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_flightdata.cpp > CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.i
+CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_geometry.cpp > CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_flightdata.cpp -o CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.s
+CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_geometry.cpp -o CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o: ../src/ork_mass_components.cpp
-CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_mass_components.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o: ../src/ork/ork_flightdata.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_flightdata.cpp
 
-CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_mass_components.cpp > CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.i
+CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_flightdata.cpp > CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_mass_components.cpp -o CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.s
+CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_flightdata.cpp -o CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o: ../src/ork_loader.cpp
-CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_loader.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o: ../src/ork/ork_mass_components.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_mass_components.cpp
 
-CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_loader.cpp > CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.i
+CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_mass_components.cpp > CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork_loader.cpp -o CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.s
+CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_mass_components.cpp -o CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.s
 
-CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
-CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o: ../src/thrust_vector_control.cpp
-CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/thrust_vector_control.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o: ../src/ork/ork_loader.cpp
+CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_loader.cpp
 
-CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/thrust_vector_control.cpp > CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.i
+CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_loader.cpp > CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.i
 
-CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/thrust_vector_control.cpp -o CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.s
+CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/ork/ork_loader.cpp -o CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.s
+
+CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o: ../src/gnc/thrust_vector_control.cpp
+CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/thrust_vector_control.cpp
+
+CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/thrust_vector_control.cpp > CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.i
+
+CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/thrust_vector_control.cpp -o CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.s
+
+CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o: ../src/gnc/sensors.cpp
+CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/sensors.cpp
+
+CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/sensors.cpp > CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.i
+
+CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/sensors.cpp -o CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.s
+
+CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o: CMakeFiles/rocket_cpp.dir/flags.make
+CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o: ../src/gnc/navigation.cpp
+CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o: CMakeFiles/rocket_cpp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o -MF CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o.d -o CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o -c /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/navigation.cpp
+
+CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/navigation.cpp > CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.i
+
+CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/src/gnc/navigation.cpp -o CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.s
 
 # Object files for target rocket_cpp
 rocket_cpp_OBJECTS = \
 "CMakeFiles/rocket_cpp.dir/src/main.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o" \
-"CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o"
+"CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o" \
+"CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o"
 
 # External object files for target rocket_cpp
 rocket_cpp_EXTERNAL_OBJECTS =
 
 rocket_cpp: CMakeFiles/rocket_cpp.dir/src/main.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o
-rocket_cpp: CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o
+rocket_cpp: CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o
 rocket_cpp: CMakeFiles/rocket_cpp.dir/build.make
 rocket_cpp: /usr/lib/x86_64-linux-gnu/libzip.so
 rocket_cpp: /usr/lib/x86_64-linux-gnu/libtinyxml2.so
 rocket_cpp: CMakeFiles/rocket_cpp.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Linking CXX executable rocket_cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Linking CXX executable rocket_cpp"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/rocket_cpp.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

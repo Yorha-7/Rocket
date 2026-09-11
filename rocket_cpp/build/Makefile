@@ -129,53 +129,77 @@ rocket_cpp/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/build
 .PHONY : rocket_cpp/fast
 
-src/aerodynamics.o: src/aerodynamics.cpp.o
-.PHONY : src/aerodynamics.o
+src/gnc/navigation.o: src/gnc/navigation.cpp.o
+.PHONY : src/gnc/navigation.o
 
 # target to build an object file
-src/aerodynamics.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.o
-.PHONY : src/aerodynamics.cpp.o
+src/gnc/navigation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o
+.PHONY : src/gnc/navigation.cpp.o
 
-src/aerodynamics.i: src/aerodynamics.cpp.i
-.PHONY : src/aerodynamics.i
+src/gnc/navigation.i: src/gnc/navigation.cpp.i
+.PHONY : src/gnc/navigation.i
 
 # target to preprocess a source file
-src/aerodynamics.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.i
-.PHONY : src/aerodynamics.cpp.i
+src/gnc/navigation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.i
+.PHONY : src/gnc/navigation.cpp.i
 
-src/aerodynamics.s: src/aerodynamics.cpp.s
-.PHONY : src/aerodynamics.s
+src/gnc/navigation.s: src/gnc/navigation.cpp.s
+.PHONY : src/gnc/navigation.s
 
 # target to generate assembly for a file
-src/aerodynamics.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/aerodynamics.cpp.s
-.PHONY : src/aerodynamics.cpp.s
+src/gnc/navigation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.s
+.PHONY : src/gnc/navigation.cpp.s
 
-src/atmosphere.o: src/atmosphere.cpp.o
-.PHONY : src/atmosphere.o
+src/gnc/sensors.o: src/gnc/sensors.cpp.o
+.PHONY : src/gnc/sensors.o
 
 # target to build an object file
-src/atmosphere.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.o
-.PHONY : src/atmosphere.cpp.o
+src/gnc/sensors.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o
+.PHONY : src/gnc/sensors.cpp.o
 
-src/atmosphere.i: src/atmosphere.cpp.i
-.PHONY : src/atmosphere.i
+src/gnc/sensors.i: src/gnc/sensors.cpp.i
+.PHONY : src/gnc/sensors.i
 
 # target to preprocess a source file
-src/atmosphere.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.i
-.PHONY : src/atmosphere.cpp.i
+src/gnc/sensors.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.i
+.PHONY : src/gnc/sensors.cpp.i
 
-src/atmosphere.s: src/atmosphere.cpp.s
-.PHONY : src/atmosphere.s
+src/gnc/sensors.s: src/gnc/sensors.cpp.s
+.PHONY : src/gnc/sensors.s
 
 # target to generate assembly for a file
-src/atmosphere.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/atmosphere.cpp.s
-.PHONY : src/atmosphere.cpp.s
+src/gnc/sensors.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.s
+.PHONY : src/gnc/sensors.cpp.s
+
+src/gnc/thrust_vector_control.o: src/gnc/thrust_vector_control.cpp.o
+.PHONY : src/gnc/thrust_vector_control.o
+
+# target to build an object file
+src/gnc/thrust_vector_control.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o
+.PHONY : src/gnc/thrust_vector_control.cpp.o
+
+src/gnc/thrust_vector_control.i: src/gnc/thrust_vector_control.cpp.i
+.PHONY : src/gnc/thrust_vector_control.i
+
+# target to preprocess a source file
+src/gnc/thrust_vector_control.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.i
+.PHONY : src/gnc/thrust_vector_control.cpp.i
+
+src/gnc/thrust_vector_control.s: src/gnc/thrust_vector_control.cpp.s
+.PHONY : src/gnc/thrust_vector_control.s
+
+# target to generate assembly for a file
+src/gnc/thrust_vector_control.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.s
+.PHONY : src/gnc/thrust_vector_control.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -201,221 +225,269 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/mass_properties_model.o: src/mass_properties_model.cpp.o
-.PHONY : src/mass_properties_model.o
+src/ork/ork_archive.o: src/ork/ork_archive.cpp.o
+.PHONY : src/ork/ork_archive.o
 
 # target to build an object file
-src/mass_properties_model.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.o
-.PHONY : src/mass_properties_model.cpp.o
+src/ork/ork_archive.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.o
+.PHONY : src/ork/ork_archive.cpp.o
 
-src/mass_properties_model.i: src/mass_properties_model.cpp.i
-.PHONY : src/mass_properties_model.i
+src/ork/ork_archive.i: src/ork/ork_archive.cpp.i
+.PHONY : src/ork/ork_archive.i
 
 # target to preprocess a source file
-src/mass_properties_model.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.i
-.PHONY : src/mass_properties_model.cpp.i
+src/ork/ork_archive.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.i
+.PHONY : src/ork/ork_archive.cpp.i
 
-src/mass_properties_model.s: src/mass_properties_model.cpp.s
-.PHONY : src/mass_properties_model.s
+src/ork/ork_archive.s: src/ork/ork_archive.cpp.s
+.PHONY : src/ork/ork_archive.s
 
 # target to generate assembly for a file
-src/mass_properties_model.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/mass_properties_model.cpp.s
-.PHONY : src/mass_properties_model.cpp.s
+src/ork/ork_archive.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_archive.cpp.s
+.PHONY : src/ork/ork_archive.cpp.s
 
-src/ork_archive.o: src/ork_archive.cpp.o
-.PHONY : src/ork_archive.o
+src/ork/ork_flightdata.o: src/ork/ork_flightdata.cpp.o
+.PHONY : src/ork/ork_flightdata.o
 
 # target to build an object file
-src/ork_archive.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.o
-.PHONY : src/ork_archive.cpp.o
+src/ork/ork_flightdata.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.o
+.PHONY : src/ork/ork_flightdata.cpp.o
 
-src/ork_archive.i: src/ork_archive.cpp.i
-.PHONY : src/ork_archive.i
+src/ork/ork_flightdata.i: src/ork/ork_flightdata.cpp.i
+.PHONY : src/ork/ork_flightdata.i
 
 # target to preprocess a source file
-src/ork_archive.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.i
-.PHONY : src/ork_archive.cpp.i
+src/ork/ork_flightdata.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.i
+.PHONY : src/ork/ork_flightdata.cpp.i
 
-src/ork_archive.s: src/ork_archive.cpp.s
-.PHONY : src/ork_archive.s
+src/ork/ork_flightdata.s: src/ork/ork_flightdata.cpp.s
+.PHONY : src/ork/ork_flightdata.s
 
 # target to generate assembly for a file
-src/ork_archive.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_archive.cpp.s
-.PHONY : src/ork_archive.cpp.s
+src/ork/ork_flightdata.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_flightdata.cpp.s
+.PHONY : src/ork/ork_flightdata.cpp.s
 
-src/ork_flightdata.o: src/ork_flightdata.cpp.o
-.PHONY : src/ork_flightdata.o
+src/ork/ork_geometry.o: src/ork/ork_geometry.cpp.o
+.PHONY : src/ork/ork_geometry.o
 
 # target to build an object file
-src/ork_flightdata.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.o
-.PHONY : src/ork_flightdata.cpp.o
+src/ork/ork_geometry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.o
+.PHONY : src/ork/ork_geometry.cpp.o
 
-src/ork_flightdata.i: src/ork_flightdata.cpp.i
-.PHONY : src/ork_flightdata.i
+src/ork/ork_geometry.i: src/ork/ork_geometry.cpp.i
+.PHONY : src/ork/ork_geometry.i
 
 # target to preprocess a source file
-src/ork_flightdata.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.i
-.PHONY : src/ork_flightdata.cpp.i
+src/ork/ork_geometry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.i
+.PHONY : src/ork/ork_geometry.cpp.i
 
-src/ork_flightdata.s: src/ork_flightdata.cpp.s
-.PHONY : src/ork_flightdata.s
+src/ork/ork_geometry.s: src/ork/ork_geometry.cpp.s
+.PHONY : src/ork/ork_geometry.s
 
 # target to generate assembly for a file
-src/ork_flightdata.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_flightdata.cpp.s
-.PHONY : src/ork_flightdata.cpp.s
+src/ork/ork_geometry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_geometry.cpp.s
+.PHONY : src/ork/ork_geometry.cpp.s
 
-src/ork_geometry.o: src/ork_geometry.cpp.o
-.PHONY : src/ork_geometry.o
+src/ork/ork_loader.o: src/ork/ork_loader.cpp.o
+.PHONY : src/ork/ork_loader.o
 
 # target to build an object file
-src/ork_geometry.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.o
-.PHONY : src/ork_geometry.cpp.o
+src/ork/ork_loader.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.o
+.PHONY : src/ork/ork_loader.cpp.o
 
-src/ork_geometry.i: src/ork_geometry.cpp.i
-.PHONY : src/ork_geometry.i
+src/ork/ork_loader.i: src/ork/ork_loader.cpp.i
+.PHONY : src/ork/ork_loader.i
 
 # target to preprocess a source file
-src/ork_geometry.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.i
-.PHONY : src/ork_geometry.cpp.i
+src/ork/ork_loader.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.i
+.PHONY : src/ork/ork_loader.cpp.i
 
-src/ork_geometry.s: src/ork_geometry.cpp.s
-.PHONY : src/ork_geometry.s
+src/ork/ork_loader.s: src/ork/ork_loader.cpp.s
+.PHONY : src/ork/ork_loader.s
 
 # target to generate assembly for a file
-src/ork_geometry.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_geometry.cpp.s
-.PHONY : src/ork_geometry.cpp.s
+src/ork/ork_loader.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_loader.cpp.s
+.PHONY : src/ork/ork_loader.cpp.s
 
-src/ork_loader.o: src/ork_loader.cpp.o
-.PHONY : src/ork_loader.o
+src/ork/ork_mass_components.o: src/ork/ork_mass_components.cpp.o
+.PHONY : src/ork/ork_mass_components.o
 
 # target to build an object file
-src/ork_loader.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.o
-.PHONY : src/ork_loader.cpp.o
+src/ork/ork_mass_components.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.o
+.PHONY : src/ork/ork_mass_components.cpp.o
 
-src/ork_loader.i: src/ork_loader.cpp.i
-.PHONY : src/ork_loader.i
+src/ork/ork_mass_components.i: src/ork/ork_mass_components.cpp.i
+.PHONY : src/ork/ork_mass_components.i
 
 # target to preprocess a source file
-src/ork_loader.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.i
-.PHONY : src/ork_loader.cpp.i
+src/ork/ork_mass_components.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.i
+.PHONY : src/ork/ork_mass_components.cpp.i
 
-src/ork_loader.s: src/ork_loader.cpp.s
-.PHONY : src/ork_loader.s
+src/ork/ork_mass_components.s: src/ork/ork_mass_components.cpp.s
+.PHONY : src/ork/ork_mass_components.s
 
 # target to generate assembly for a file
-src/ork_loader.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_loader.cpp.s
-.PHONY : src/ork_loader.cpp.s
+src/ork/ork_mass_components.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork/ork_mass_components.cpp.s
+.PHONY : src/ork/ork_mass_components.cpp.s
 
-src/ork_mass_components.o: src/ork_mass_components.cpp.o
-.PHONY : src/ork_mass_components.o
+src/sim/aerodynamics.o: src/sim/aerodynamics.cpp.o
+.PHONY : src/sim/aerodynamics.o
 
 # target to build an object file
-src/ork_mass_components.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.o
-.PHONY : src/ork_mass_components.cpp.o
+src/sim/aerodynamics.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.o
+.PHONY : src/sim/aerodynamics.cpp.o
 
-src/ork_mass_components.i: src/ork_mass_components.cpp.i
-.PHONY : src/ork_mass_components.i
+src/sim/aerodynamics.i: src/sim/aerodynamics.cpp.i
+.PHONY : src/sim/aerodynamics.i
 
 # target to preprocess a source file
-src/ork_mass_components.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.i
-.PHONY : src/ork_mass_components.cpp.i
+src/sim/aerodynamics.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.i
+.PHONY : src/sim/aerodynamics.cpp.i
 
-src/ork_mass_components.s: src/ork_mass_components.cpp.s
-.PHONY : src/ork_mass_components.s
+src/sim/aerodynamics.s: src/sim/aerodynamics.cpp.s
+.PHONY : src/sim/aerodynamics.s
 
 # target to generate assembly for a file
-src/ork_mass_components.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/ork_mass_components.cpp.s
-.PHONY : src/ork_mass_components.cpp.s
+src/sim/aerodynamics.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/aerodynamics.cpp.s
+.PHONY : src/sim/aerodynamics.cpp.s
 
-src/pitch_dynamics.o: src/pitch_dynamics.cpp.o
-.PHONY : src/pitch_dynamics.o
+src/sim/atmosphere.o: src/sim/atmosphere.cpp.o
+.PHONY : src/sim/atmosphere.o
 
 # target to build an object file
-src/pitch_dynamics.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.o
-.PHONY : src/pitch_dynamics.cpp.o
+src/sim/atmosphere.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.o
+.PHONY : src/sim/atmosphere.cpp.o
 
-src/pitch_dynamics.i: src/pitch_dynamics.cpp.i
-.PHONY : src/pitch_dynamics.i
+src/sim/atmosphere.i: src/sim/atmosphere.cpp.i
+.PHONY : src/sim/atmosphere.i
 
 # target to preprocess a source file
-src/pitch_dynamics.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.i
-.PHONY : src/pitch_dynamics.cpp.i
+src/sim/atmosphere.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.i
+.PHONY : src/sim/atmosphere.cpp.i
 
-src/pitch_dynamics.s: src/pitch_dynamics.cpp.s
-.PHONY : src/pitch_dynamics.s
+src/sim/atmosphere.s: src/sim/atmosphere.cpp.s
+.PHONY : src/sim/atmosphere.s
 
 # target to generate assembly for a file
-src/pitch_dynamics.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/pitch_dynamics.cpp.s
-.PHONY : src/pitch_dynamics.cpp.s
+src/sim/atmosphere.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/atmosphere.cpp.s
+.PHONY : src/sim/atmosphere.cpp.s
 
-src/rocket_kinematics.o: src/rocket_kinematics.cpp.o
-.PHONY : src/rocket_kinematics.o
+src/sim/mass_properties_model.o: src/sim/mass_properties_model.cpp.o
+.PHONY : src/sim/mass_properties_model.o
 
 # target to build an object file
-src/rocket_kinematics.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.o
-.PHONY : src/rocket_kinematics.cpp.o
+src/sim/mass_properties_model.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.o
+.PHONY : src/sim/mass_properties_model.cpp.o
 
-src/rocket_kinematics.i: src/rocket_kinematics.cpp.i
-.PHONY : src/rocket_kinematics.i
+src/sim/mass_properties_model.i: src/sim/mass_properties_model.cpp.i
+.PHONY : src/sim/mass_properties_model.i
 
 # target to preprocess a source file
-src/rocket_kinematics.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.i
-.PHONY : src/rocket_kinematics.cpp.i
+src/sim/mass_properties_model.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.i
+.PHONY : src/sim/mass_properties_model.cpp.i
 
-src/rocket_kinematics.s: src/rocket_kinematics.cpp.s
-.PHONY : src/rocket_kinematics.s
+src/sim/mass_properties_model.s: src/sim/mass_properties_model.cpp.s
+.PHONY : src/sim/mass_properties_model.s
 
 # target to generate assembly for a file
-src/rocket_kinematics.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/rocket_kinematics.cpp.s
-.PHONY : src/rocket_kinematics.cpp.s
+src/sim/mass_properties_model.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/mass_properties_model.cpp.s
+.PHONY : src/sim/mass_properties_model.cpp.s
 
-src/thrust_vector_control.o: src/thrust_vector_control.cpp.o
-.PHONY : src/thrust_vector_control.o
+src/sim/pitch_dynamics.o: src/sim/pitch_dynamics.cpp.o
+.PHONY : src/sim/pitch_dynamics.o
 
 # target to build an object file
-src/thrust_vector_control.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.o
-.PHONY : src/thrust_vector_control.cpp.o
+src/sim/pitch_dynamics.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.o
+.PHONY : src/sim/pitch_dynamics.cpp.o
 
-src/thrust_vector_control.i: src/thrust_vector_control.cpp.i
-.PHONY : src/thrust_vector_control.i
+src/sim/pitch_dynamics.i: src/sim/pitch_dynamics.cpp.i
+.PHONY : src/sim/pitch_dynamics.i
 
 # target to preprocess a source file
-src/thrust_vector_control.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.i
-.PHONY : src/thrust_vector_control.cpp.i
+src/sim/pitch_dynamics.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.i
+.PHONY : src/sim/pitch_dynamics.cpp.i
 
-src/thrust_vector_control.s: src/thrust_vector_control.cpp.s
-.PHONY : src/thrust_vector_control.s
+src/sim/pitch_dynamics.s: src/sim/pitch_dynamics.cpp.s
+.PHONY : src/sim/pitch_dynamics.s
 
 # target to generate assembly for a file
-src/thrust_vector_control.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/thrust_vector_control.cpp.s
-.PHONY : src/thrust_vector_control.cpp.s
+src/sim/pitch_dynamics.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/pitch_dynamics.cpp.s
+.PHONY : src/sim/pitch_dynamics.cpp.s
+
+src/sim/rocket_kinematics.o: src/sim/rocket_kinematics.cpp.o
+.PHONY : src/sim/rocket_kinematics.o
+
+# target to build an object file
+src/sim/rocket_kinematics.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.o
+.PHONY : src/sim/rocket_kinematics.cpp.o
+
+src/sim/rocket_kinematics.i: src/sim/rocket_kinematics.cpp.i
+.PHONY : src/sim/rocket_kinematics.i
+
+# target to preprocess a source file
+src/sim/rocket_kinematics.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.i
+.PHONY : src/sim/rocket_kinematics.cpp.i
+
+src/sim/rocket_kinematics.s: src/sim/rocket_kinematics.cpp.s
+.PHONY : src/sim/rocket_kinematics.s
+
+# target to generate assembly for a file
+src/sim/rocket_kinematics.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/rocket_kinematics.cpp.s
+.PHONY : src/sim/rocket_kinematics.cpp.s
+
+src/sim/yaw_dynamics.o: src/sim/yaw_dynamics.cpp.o
+.PHONY : src/sim/yaw_dynamics.o
+
+# target to build an object file
+src/sim/yaw_dynamics.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.o
+.PHONY : src/sim/yaw_dynamics.cpp.o
+
+src/sim/yaw_dynamics.i: src/sim/yaw_dynamics.cpp.i
+.PHONY : src/sim/yaw_dynamics.i
+
+# target to preprocess a source file
+src/sim/yaw_dynamics.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.i
+.PHONY : src/sim/yaw_dynamics.cpp.i
+
+src/sim/yaw_dynamics.s: src/sim/yaw_dynamics.cpp.s
+.PHONY : src/sim/yaw_dynamics.s
+
+# target to generate assembly for a file
+src/sim/yaw_dynamics.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/sim/yaw_dynamics.cpp.s
+.PHONY : src/sim/yaw_dynamics.cpp.s
 
 # Help Target
 help:
@@ -426,42 +498,51 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... rocket_cpp"
-	@echo "... src/aerodynamics.o"
-	@echo "... src/aerodynamics.i"
-	@echo "... src/aerodynamics.s"
-	@echo "... src/atmosphere.o"
-	@echo "... src/atmosphere.i"
-	@echo "... src/atmosphere.s"
+	@echo "... src/gnc/navigation.o"
+	@echo "... src/gnc/navigation.i"
+	@echo "... src/gnc/navigation.s"
+	@echo "... src/gnc/sensors.o"
+	@echo "... src/gnc/sensors.i"
+	@echo "... src/gnc/sensors.s"
+	@echo "... src/gnc/thrust_vector_control.o"
+	@echo "... src/gnc/thrust_vector_control.i"
+	@echo "... src/gnc/thrust_vector_control.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/mass_properties_model.o"
-	@echo "... src/mass_properties_model.i"
-	@echo "... src/mass_properties_model.s"
-	@echo "... src/ork_archive.o"
-	@echo "... src/ork_archive.i"
-	@echo "... src/ork_archive.s"
-	@echo "... src/ork_flightdata.o"
-	@echo "... src/ork_flightdata.i"
-	@echo "... src/ork_flightdata.s"
-	@echo "... src/ork_geometry.o"
-	@echo "... src/ork_geometry.i"
-	@echo "... src/ork_geometry.s"
-	@echo "... src/ork_loader.o"
-	@echo "... src/ork_loader.i"
-	@echo "... src/ork_loader.s"
-	@echo "... src/ork_mass_components.o"
-	@echo "... src/ork_mass_components.i"
-	@echo "... src/ork_mass_components.s"
-	@echo "... src/pitch_dynamics.o"
-	@echo "... src/pitch_dynamics.i"
-	@echo "... src/pitch_dynamics.s"
-	@echo "... src/rocket_kinematics.o"
-	@echo "... src/rocket_kinematics.i"
-	@echo "... src/rocket_kinematics.s"
-	@echo "... src/thrust_vector_control.o"
-	@echo "... src/thrust_vector_control.i"
-	@echo "... src/thrust_vector_control.s"
+	@echo "... src/ork/ork_archive.o"
+	@echo "... src/ork/ork_archive.i"
+	@echo "... src/ork/ork_archive.s"
+	@echo "... src/ork/ork_flightdata.o"
+	@echo "... src/ork/ork_flightdata.i"
+	@echo "... src/ork/ork_flightdata.s"
+	@echo "... src/ork/ork_geometry.o"
+	@echo "... src/ork/ork_geometry.i"
+	@echo "... src/ork/ork_geometry.s"
+	@echo "... src/ork/ork_loader.o"
+	@echo "... src/ork/ork_loader.i"
+	@echo "... src/ork/ork_loader.s"
+	@echo "... src/ork/ork_mass_components.o"
+	@echo "... src/ork/ork_mass_components.i"
+	@echo "... src/ork/ork_mass_components.s"
+	@echo "... src/sim/aerodynamics.o"
+	@echo "... src/sim/aerodynamics.i"
+	@echo "... src/sim/aerodynamics.s"
+	@echo "... src/sim/atmosphere.o"
+	@echo "... src/sim/atmosphere.i"
+	@echo "... src/sim/atmosphere.s"
+	@echo "... src/sim/mass_properties_model.o"
+	@echo "... src/sim/mass_properties_model.i"
+	@echo "... src/sim/mass_properties_model.s"
+	@echo "... src/sim/pitch_dynamics.o"
+	@echo "... src/sim/pitch_dynamics.i"
+	@echo "... src/sim/pitch_dynamics.s"
+	@echo "... src/sim/rocket_kinematics.o"
+	@echo "... src/sim/rocket_kinematics.i"
+	@echo "... src/sim/rocket_kinematics.s"
+	@echo "... src/sim/yaw_dynamics.o"
+	@echo "... src/sim/yaw_dynamics.i"
+	@echo "... src/sim/yaw_dynamics.s"
 .PHONY : help
 
 

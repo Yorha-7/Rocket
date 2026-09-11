@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rocket_types.hpp"
-#include "ork_mass_components.hpp"
+#include "sim/rocket_types.hpp"
+#include "ork/ork_mass_components.hpp"
 #include <vector>
 
 // Computes the vehicle's own mass/CG/inertia from its structural

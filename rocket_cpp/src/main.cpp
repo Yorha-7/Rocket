@@ -1,7 +1,8 @@
-#include "rocket_kinematics.hpp"
-#include "ork_loader.hpp"
-#include "aerodynamics.hpp"
-#include "mass_properties_model.hpp"
+#include "sim/rocket_kinematics.hpp"
+#include "gnc/navigation.hpp"
+#include "ork/ork_loader.hpp"
+#include "sim/aerodynamics.hpp"
+#include "sim/mass_properties_model.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -68,14 +69,14 @@ int main() {
     // never has anything to restore from. Override with a small nonzero
     // tilt so the pitch dynamics (gravity/aero/damping torque) actually
     // show something, instead of leaving it real but silent.
-    const double INIT_TILT_OVERRIDE_DEG = 3.0;
+    const double INIT_TILT_OVERRIDE_DEG = 0.0;
     config.init_tilt = INIT_TILT_OVERRIDE_DEG;
 
     // Same idea, but for yaw: the .ork has no yaw/azimuth concept at all,
     // so this is a small fixed launch-azimuth deviation rather than
     // anything read from the design file. Stays constant for the whole
     // flight -- there's no yaw torque model yet to let it evolve.
-    const double INIT_YAW_OVERRIDE_DEG = 3.0;
+    const double INIT_YAW_OVERRIDE_DEG = 0.0;
     config.init_yaw = INIT_YAW_OVERRIDE_DEG;
 
     const RocketParams& params = rocket.params;
@@ -118,23 +119,29 @@ int main() {
     // ============================================================
     RocketKinematics sim(params, config, rocket.mass_components);
 
-    std::cout << "\nRocket Simulation (3DOF translation + pitch) with Ground Termination\n";
+    std::cout << "\nRocket Simulation (3DOF translation + pitch/yaw dynamics + TVC/Navigation) "
+                 "with Ground Termination\n";
     std::cout << "==================================================\n";
     std::cout << "Config: launch_height=" << config.launch_height
               << "m, init_tilt=" << config.init_tilt
               << "deg, dt=" << config.dt << "s\n";
 
-    const std::string tvc_sequence_path = "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/data/tvc_test_sequence.csv";
-    int n_steps_estimate = static_cast<int>(config.sim_duration / config.dt);
-    auto tvc_targets = loadTvcTestSequence(tvc_sequence_path, config.dt, n_steps_estimate);
-    std::cout << "Loaded TVC test sequence from " << tvc_sequence_path << "\n";
+    // Navigation test target -- hardcoded here for now (no mission-planning
+    // input yet, per the current staging-area scope). Comfortably above
+    // Navigation's MIN_TARGET_ALTITUDE_M ground-safety floor, and within
+    // the kind of x/y range the TVC test sequence already showed this
+    // vehicle's actuator authority can actually reach.
+    const Eigen::Vector3d NAV_TARGET(0.0, 600.0, 200.0);
+    Navigation navigation(NAV_TARGET);
+    std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
+              << ", " << NAV_TARGET.z() << ") m -- guidance law: point the nose at it, TVC does the rest\n";
 
-    auto states = sim.simulate(config.sim_duration, flight_data, tvc_targets);
+    auto states = sim.simulate(config.sim_duration, flight_data, {}, &navigation);
 
     // ============================================================
     // Extract time series for output and plotting
     // ============================================================
-    std::vector<double> time_vec, x_vec, y_vec, height_vec, velocity_vec, pitch_vec;
+    std::vector<double> time_vec, x_vec, y_vec, height_vec, velocity_vec, pitch_vec, yaw_vec;
     std::vector<double> gimbal_pitch_vec, gimbal_yaw_vec;
     time_vec.reserve(states.size());
     x_vec.reserve(states.size());
@@ -142,6 +149,7 @@ int main() {
     height_vec.reserve(states.size());
     velocity_vec.reserve(states.size());
     pitch_vec.reserve(states.size());
+    yaw_vec.reserve(states.size());
     gimbal_pitch_vec.reserve(states.size());
     gimbal_yaw_vec.reserve(states.size());
 
@@ -152,6 +160,7 @@ int main() {
         height_vec.push_back(states[i].position(2));
         velocity_vec.push_back(states[i].velocity.norm());
         pitch_vec.push_back(states[i].orientation(1) * 180.0 / M_PI);
+        yaw_vec.push_back(states[i].orientation(2) * 180.0 / M_PI);
         gimbal_pitch_vec.push_back(states[i].gimbal_pitch_rad * 180.0 / M_PI);
         gimbal_yaw_vec.push_back(states[i].gimbal_yaw_rad * 180.0 / M_PI);
     }
@@ -209,16 +218,18 @@ int main() {
         std::cerr << "Warning: could not chdir to project root; writing CSV to current directory.\n";
     }
     std::ofstream csv("rocket_trajectory.csv");
-    csv << "time,x,y,height,velocity,pitch,ang_vel,ang_accel,"
-        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg\n";
+    csv << "time,x,y,height,velocity,pitch,yaw,ang_vel,ang_accel,"
+        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg,"
+        << "target_x,target_y,target_z\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(6);
         csv << time_vec[i] << "," << x_vec[i] << "," << y_vec[i] << "," << height_vec[i] << ","
             << velocity_vec[i] << ","
-            << pitch_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
+            << pitch_vec[i] << "," << yaw_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
             << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << ","
             << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << ","
-            << gimbal_pitch_vec[i] << "," << gimbal_yaw_vec[i] << "\n";
+            << gimbal_pitch_vec[i] << "," << gimbal_yaw_vec[i] << ","
+            << NAV_TARGET.x() << "," << NAV_TARGET.y() << "," << NAV_TARGET.z() << "\n";
     }
     csv.close();
 

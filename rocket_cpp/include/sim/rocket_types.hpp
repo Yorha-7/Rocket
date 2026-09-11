@@ -140,6 +140,14 @@ struct PitchTorques {
     double damping;      // N*m
 };
 
+// Same breakdown, yaw axis -- see YawTorques' mirror-of-pitch model in
+// yaw_dynamics.cpp.
+struct YawTorques {
+    double gravity;      // N*m -- always 0, same reasoning as PitchTorques
+    double aerodynamic;  // N*m
+    double damping;      // N*m
+};
+
 // Convert grams to kg.
 // inline = tells the compiler it's safe for this tiny function's body to be
 // copied into every place that calls it (needed since it's defined here in
