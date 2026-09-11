@@ -16,6 +16,16 @@ Navigation::Navigation(const Eigen::Vector3d& target_position) : target_position
 }
 
 Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro, double dt) {
+    // Below the activation floor: hold neutral and keep the integrators
+    // at zero, so whenever guidance DOES activate it starts from a clean
+    // slate instead of carrying windup accumulated while it was sitting
+    // idle on the pad (see class doc comment for why this floor exists).
+    if (gps.readPosition().z() < ACTIVATION_ALTITUDE_M) {
+        integral_pitch_ = 0.0;
+        integral_yaw_ = 0.0;
+        return Eigen::Vector3d(0, 0, 1);
+    }
+
     // Straight-line vector from where GPS says we are to the target,
     // still in world frame (north/east/up) at this point.
     Eigen::Vector3d to_target_world = target_position_ - gps.readPosition();

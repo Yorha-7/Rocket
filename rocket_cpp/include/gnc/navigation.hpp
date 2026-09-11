@@ -16,6 +16,13 @@
 // reading doesn't) -- but empirically (see KD's comment) it's left at
 // zero here, since the actuator's own first-order lag already fills that
 // role.
+//
+// Stays neutral below ACTIVATION_ALTITUDE_M: right off the pad, the
+// rocket is slow and barely off vertical, so a tiny geometric angle
+// error swings the PID command toward full gimbal deflection -- exactly
+// the wrong moment for that (rail/tower still nearby, no airspeed yet
+// for TVC's authority to mean much anyway). Guidance only takes over
+// once the vehicle has cleared that floor.
 class Navigation {
 public:
     // target_position: world-frame aim point, fixed for the flight
@@ -33,6 +40,12 @@ public:
 
 private:
     static constexpr double MIN_TARGET_ALTITUDE_M = 10.0;  // ground-safety floor, meters
+
+    // Altitude the VEHICLE must clear before guidance activates (not to
+    // be confused with MIN_TARGET_ALTITUDE_M above, which is about where
+    // the TARGET sits, checked once at construction). Checked every
+    // step, against the live GPS reading -- see class doc comment.
+    static constexpr double ACTIVATION_ALTITUDE_M = 50.0;
 
     // ---- Tuned here directly -- no config file for now ----
     // Kp=1, Ki=0, Kd=0 reproduces the old direct-passthrough behavior
