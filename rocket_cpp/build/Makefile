@@ -129,6 +129,30 @@ rocket_cpp/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/build
 .PHONY : rocket_cpp/fast
 
+src/cli_args.o: src/cli_args.cpp.o
+.PHONY : src/cli_args.o
+
+# target to build an object file
+src/cli_args.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/cli_args.cpp.o
+.PHONY : src/cli_args.cpp.o
+
+src/cli_args.i: src/cli_args.cpp.i
+.PHONY : src/cli_args.i
+
+# target to preprocess a source file
+src/cli_args.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/cli_args.cpp.i
+.PHONY : src/cli_args.cpp.i
+
+src/cli_args.s: src/cli_args.cpp.s
+.PHONY : src/cli_args.s
+
+# target to generate assembly for a file
+src/cli_args.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rocket_cpp.dir/build.make CMakeFiles/rocket_cpp.dir/src/cli_args.cpp.s
+.PHONY : src/cli_args.cpp.s
+
 src/gnc/navigation.o: src/gnc/navigation.cpp.o
 .PHONY : src/gnc/navigation.o
 
@@ -498,6 +522,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... rocket_cpp"
+	@echo "... src/cli_args.o"
+	@echo "... src/cli_args.i"
+	@echo "... src/cli_args.s"
 	@echo "... src/gnc/navigation.o"
 	@echo "... src/gnc/navigation.i"
 	@echo "... src/gnc/navigation.s"

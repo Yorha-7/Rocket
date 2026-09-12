@@ -277,51 +277,72 @@ mass/CG/CP/I_yy and drag/normal-force coefficients at a sample flight
 condition, so you can sanity-check the geometry parse before trusting the
 trajectory.
 
-`main.cpp` hardcodes an absolute path to `artifacts/rocket.ork` and to the
-project root for the plot call — update those if you move the tree.
+Both `artifacts/rocket.ork` and the project root (for the plot call) are
+located from the running binary's own real path (`findProjectRoot()` in
+`cli_args.cpp`, via `/proc/self/exe`), not a hardcoded machine-specific
+string — works regardless of which directory you invoke it from.
 
 ### Customize a launch
 
-There's no CLI yet — launch conditions are edited directly in `main.cpp`:
+Launch conditions are CLI flags now — no rebuild needed to try a different
+target or tilt:
 
-| What | Where | Notes |
+```bash
+./build/rocket_cpp --target 300 0 500 --init-tilt 2 --init-yaw 5
+```
+
+| Flag | Overrides | Notes |
 |---|---|---|
-| Launch tilt (pitch) | `INIT_TILT_OVERRIDE_DEG` in `main.cpp` | Degrees from vertical. Every simulation embedded in the `.ork` uses a dead-vertical rod (0°), so this override is what actually gives the pitch dynamics something to act on. |
-| Launch azimuth (yaw) | `INIT_YAW_OVERRIDE_DEG` in `main.cpp` | Degrees. Fixed for the whole flight (no yaw torque model) — see [Sign conventions](#sign-conventions) for how it combines with tilt. |
-| Integrator step size | `config.dt` | Smaller = more accurate but slower and a bigger CSV. |
-| Which motor config | `loadOrkRocket(path, dt, motor?)` (`ork/ork_loader.hpp`) | Defaults to the `.ork`'s `default="true"` simulation; pass a motor name to pick another of the 5 embedded configs. |
-| Navigation target | `NAV_TARGET` in `main.cpp` | World-frame point `Navigation` steers TVC toward (see [Sensors & Navigation](#sensors--navigation)). Must be `z > 10m` — anything on/near the ground throws at construction. |
-| TVC actuator limits/speed | `MAX_GIMBAL_DEG`, `TAU_PITCH_S`, `TAU_YAW_S` in `gnc/thrust_vector_control.hpp` | Hardcoded private constants, no config file yet. |
+| `--target X Y Z` | `NAV_TARGET` | World-frame point `Navigation` steers TVC toward (see [Sensors & Navigation](#sensors--navigation)). Must be `z > 10m` — anything on/near the ground throws at construction (caught in `main()`, reported to stderr with exit code 1, not an uncaught-exception abort). |
+| `--init-tilt DEG` | Launch tilt (pitch) | Degrees from vertical. Every simulation embedded in the `.ork` uses a dead-vertical rod (0°), so this is what actually gives the pitch dynamics something to act on. |
+| `--init-yaw DEG` | Launch azimuth (yaw) | Degrees. Fixed for the whole flight (no yaw torque model) — see [Sign conventions](#sign-conventions) for how it combines with tilt. |
+| `--preview` | `config.dt`, `config.sim_duration` | Swaps to a faster/coarser fidelity (dt 0.001→0.004, duration cap 300s→60s) for quick exploration — this is what `scripts/trajectory.py`'s GUI uses under the hood. Not for trusted final numbers; omit for a real run. |
+| `--no-plot` | — | Skips the `system("python3 scripts/plot_trajectory.py ...")` call — useful for a caller (like the GUI) that's about to render its own plot in-process anyway. |
 
-Re-run `cmake --build build` after editing, then `./build/rocket_cpp` again
-— **a source edit alone changes nothing on disk**: `rocket_trajectory.csv`
-(and anything reading it, like `trajectory.py`) still reflects the
-*previous* build until you rebuild and rerun.
+Any flag left out keeps its old hardcoded default (see `CliArgs` in
+`cli_args.hpp`), so `./build/rocket_cpp` with no flags at all still behaves
+exactly like before these existed. Still hardcoded, no flag yet: integrator
+step size outside `--preview` (`config.dt`), which motor config
+(`loadOrkRocket`'s optional third argument), and TVC actuator limits/speed
+(`MAX_GIMBAL_DEG`, `TAU_PITCH_S`, `TAU_YAW_S` in `gnc/thrust_vector_control.hpp`).
 
 ### Visualize a trajectory
 
-The 2D panel figures above are generated automatically. For an interactive,
-rotatable 3D view of the same flight:
+`scripts/trajectory.py` is no longer just a viewer — it's the control panel:
 
 ```bash
-python3 scripts/trajectory.py rocket_trajectory.csv   # defaults to this path if omitted
+python3 scripts/trajectory.py
 ```
 
-Opens a matplotlib window (rotate/zoom with the mouse) with the path colored
-by time and launch/apogee/impact markers. The box is a fixed equal-unit cube
-(same meter range on all three axes, auto-sized to the flight's extent) so
-angles read honestly — see [Coordinate frames](#coordinate-frames--axis-conventions)
-for why that matters and what the alternative (a metrically "true to scale"
-box) actually looks like for a mostly-vertical flight.
+Opens a matplotlib window with an interactive, rotatable 3D view (path
+colored by time, launch/burnout/apogee/impact markers) alongside five text
+boxes (target x/y/z, initial tilt/yaw) and a **Run Simulation** button.
+Runs once immediately with sensible defaults so you're not looking at a
+blank plot; typing new values and clicking Run launches a fresh
+`--preview --no-plot` simulation and redraws the **same** window with the
+result — no new window per click, no CSV to manually pass around. A bad
+target (e.g. `z` below `10m`) shows the C++ program's own error message
+inline instead of crashing.
+
+The box is a fixed equal-unit cube (same meter range on all three axes,
+auto-sized to the flight's extent) so angles read honestly — see
+[Coordinate frames](#coordinate-frames--axis-conventions) for why that
+matters and what the alternative (a metrically "true to scale" box)
+actually looks like for a mostly-vertical flight.
 
 If the CSV has `target_x/y/z` columns (i.e. the run passed a `Navigation`
-to `simulate()`), the target is plotted as a purple star and a banner shows
-**green "SUCCESS"** (closest approach ≤ 20m) or **red "FAIL"** (closest
-approach over the whole flight, not just the final position — this is
-open-loop point-and-shoot guidance with no terminal intercept phase, so
-"did it ever get close" is the meaningful question, not "where did it end
-up after coasting past"). CSVs without those columns just skip this —
-older/non-guided runs don't error.
+to `simulate()` — always true from the GUI), the target is plotted as a
+purple star and a banner shows **green "SUCCESS"** (closest approach ≤
+20m) or **red "FAIL"** (closest approach over the whole flight, not just
+the final position — this is open-loop point-and-shoot guidance with no
+terminal intercept phase, so "did it ever get close" is the meaningful
+question, not "where did it end up after coasting past").
+
+The old one-shot behavior still works, for scripting or viewing a specific
+saved run without re-simulating:
+```bash
+python3 scripts/trajectory.py rocket_trajectory.csv   # plain viewer, no controls, no subprocess call
+```
 
 ### Plot the TVC command history
 
