@@ -60,7 +60,7 @@ def plot_trajectory(csv_path, output_path):
             torque_gravity = torque_gravity[:impact_idx + 1]
             torque_aero = torque_aero[:impact_idx + 1]
             torque_damping = torque_damping[:impact_idx + 1]
-    
+
     dt = t[1] - t[0]
 
     # The final sample is the impact frame: ground termination snaps
@@ -78,11 +78,11 @@ def plot_trajectory(csv_path, output_path):
     t_apogee = t[np.argmax(h)]
     h_apogee = np.max(h)
     t_impact = t[-1]
-    
+
     # 4x2 grid for 7 plots
     fig, axes = plt.subplots(4, 2, figsize=(12, 10), constrained_layout=True)
     fig.suptitle('Rocket Flight Analysis (3DOF Simulation)', fontsize=14)
-    
+
     # 1. Height vs Time
     ax = axes[0, 0]
     ax.plot(t, h, 'b-', lw=1, label='Height', markevery=100)
@@ -92,14 +92,14 @@ def plot_trajectory(csv_path, output_path):
     ax.set(xlabel='Time (s)', ylabel='Height (m)', title='Height vs Time')
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
-    
+
     # 2. Velocity vs Time
     ax = axes[0, 1]
     ax.plot(t, v, 'g-', lw=1, label='Speed', markevery=100)
     ax.set(xlabel='Time (s)', ylabel='Velocity (m/s)', title='Velocity vs Time')
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
-    
+
     # 3. Acceleration vs Time
     ax = axes[1, 0]
     ax.plot(accel_t, accel, 'r-', lw=1, label='Accel', markevery=100)
@@ -107,14 +107,14 @@ def plot_trajectory(csv_path, output_path):
     ax.set(xlabel='Time (s)', ylabel='Accel (m/s^2)', title='Acceleration vs Time')
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
-    
+
     # 4. Pitch Angle vs Time
     ax = axes[1, 1]
     ax.plot(t, p, 'm-', lw=1, label='Pitch', markevery=100)
     ax.set(xlabel='Time (s)', ylabel='Pitch (deg)', title='Pitch Angle vs Time')
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
-    
+
     # 6. Angular Velocity vs Time
     ax = axes[2, 0]
     if has_angular:
@@ -125,7 +125,7 @@ def plot_trajectory(csv_path, output_path):
     else:
         ax.text(0.5, 0.5, 'No angular data', ha='center', va='center', transform=ax.transAxes)
         ax.set(title='Angular Velocity vs Time')
-    
+
     # 7. Angular Acceleration vs Time
     ax = axes[2, 1]
     if has_angular:
@@ -136,7 +136,7 @@ def plot_trajectory(csv_path, output_path):
     else:
         ax.text(0.5, 0.5, 'No angular data', ha='center', va='center', transform=ax.transAxes)
         ax.set(title='Angular Acceleration vs Time')
-    
+
     # 5. Forces vs Time (net world-frame force, per axis)
     ax = axes[3, 0]
     if has_forces:
@@ -164,7 +164,7 @@ def plot_trajectory(csv_path, output_path):
     else:
         ax.text(0.5, 0.5, 'No torque data', ha='center', va='center', transform=ax.transAxes)
         ax.set(title='Torque Analysis')
-    
+
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"Saved plot to {output_path}")
 
