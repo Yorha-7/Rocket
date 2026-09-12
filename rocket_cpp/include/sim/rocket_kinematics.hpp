@@ -112,4 +112,11 @@ private:
     // computeNetForce() deliberately does NOT read this -- it reads the
     // gimbal angles already baked into the RocketState it's given.
     ThrustVectorControl tvc_;
+
+    // Advanced by step() each call, same implicit-accumulating pattern as
+    // tvc_ above. RocketState itself carries no time field, so this is
+    // updatePitchDynamics()'s only way to know whether it's still inside
+    // the brief ignition-transient window its safety clamp is scoped to
+    // (see pitch_dynamics.cpp).
+    double elapsed_time_s_ = 0.0;
 };

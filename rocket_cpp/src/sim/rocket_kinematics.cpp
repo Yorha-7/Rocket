@@ -104,16 +104,22 @@ Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, doub
     double drag_coeff = aero_.computeCoefficients(fc).Cd;
     double drag_area = params_.reference_area;
 
-    Eigen::Vector3d drag_neg;
+    // Already a world-frame vector -- built directly from state.velocity,
+    // which has always been world-frame throughout this codebase (see
+    // RocketState's own doc comment). No rotation needed to "convert" it;
+    // it was never in body frame to begin with.
+    Eigen::Vector3d drag_ned;
     if (v > 1e-6) {
-        drag_neg = -state.velocity.normalized() * drag_coeff * drag_area * 0.5 * rho * v2;
+        drag_ned = -state.velocity.normalized() * drag_coeff * drag_area * 0.5 * rho * v2;
     } else {
-        drag_neg = Eigen::Vector3d::Zero();
+        drag_ned = Eigen::Vector3d::Zero();
     }
 
+    // thrust_body, unlike drag, genuinely IS in body frame (built from
+    // gimbal angles measured relative to the vehicle's own axes) -- this
+    // rotation is the only one actually needed here.
     Eigen::Matrix3d R = rocketToNedFrame(state);
     Eigen::Vector3d thrust_ned = R * thrust_body;
-    Eigen::Vector3d drag_ned   = R * drag_neg;
 
     Eigen::Vector3d gravity(0, 0, -g0 * state.mass);
 
@@ -132,6 +138,7 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
     // pre-command position (it hasn't physically moved yet), matching a
     // real servo's lag.
     tvc_.commandForceDirection(tvc_target_dir);
+    elapsed_time_s_ += config_.dt;
 
     RocketState next = state;
 
@@ -160,10 +167,15 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
 std::vector<RocketState> RocketKinematics::simulate(double time, const FlightData& flight_data,
                                                     const std::vector<Eigen::Vector3d>& tvc_targets,
                                                     Navigation* navigation) {
+    // n_steps is sized from the requested flight time, NOT clamped to
+    // flight_data's own length -- that array only covers however long
+    // OpenRocket's own (unguided) simulation happened to run, which can
+    // be well short of how long THIS flight actually takes once TVC
+    // pushes it onto a different (e.g. much higher-apogee) trajectory.
+    // Ground contact is still what actually ends the loop early (below);
+    // this just stops it from running out of thrust/mass data first and
+    // silently stopping mid-air, still hundreds of meters up.
     int n_steps = static_cast<int>(time / config_.dt);
-    if (n_steps >= (int)flight_data.time.size()) {
-        n_steps = flight_data.time.size() - 1;
-    }
     std::vector<RocketState> states(n_steps + 1);
 
     RocketState initial;
@@ -183,8 +195,14 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
     sensors::Gyro nav_gyro;
 
     for (int i = 0; i < n_steps; ++i) {
-        double thrust = flight_data.thrust[i];
-        double mass_kg = gramsToKg(flight_data.mass[i]);
+        // Past the end of the recorded flight data: the motor's done
+        // burning (thrust=0) and no more propellant is left to shed
+        // (mass stays at its dry value) -- same defensive indexing
+        // main.cpp's own force-recomputation loop already uses.
+        double thrust = (i < (int)flight_data.thrust.size()) ? flight_data.thrust[i] : 0.0;
+        double mass_kg = (i < (int)flight_data.mass.size())
+            ? gramsToKg(flight_data.mass[i])
+            : gramsToKg(flight_data.dry_mass);
 
         Eigen::Vector3d tvc_target;
         if (navigation != nullptr) {
@@ -193,7 +211,7 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
             // follows. angular_vel(0)==0 for i==0, so using states[i]
             // as its own "previous" state there just gives Gyro a
             // harmless zero angular-acceleration reading at t=0.
-            nav_gps.update(states[i]);
+            nav_gps.update(states[i], config_.dt);
             const RocketState& prev = (i > 0) ? states[i - 1] : states[i];
             nav_gyro.update(states[i], prev, config_.dt);
             tvc_target = navigation->computeTvcTarget(nav_gps, nav_gyro, config_.dt);

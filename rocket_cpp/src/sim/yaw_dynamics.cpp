@@ -14,10 +14,12 @@
 // leaving y-axis steering (e.g. TVC/Navigation) with no vehicle-attitude
 // assist at all.
 //
-// Unlike pitch (tilt from vertical, where >90 degrees means the nose is
-// pointing down -- physically bounded), yaw is a compass azimuth: any
-// value 0-360 degrees is valid, so its integration wraps with fmod
-// instead of clamping to a narrow range the way pitch does.
+// Both angles wrap with fmod rather than clamp -- neither pitch nor yaw
+// is physically bounded to a narrow range (a vehicle can legitimately
+// fly nose-down, inverted, or through any azimuth); pitch used to hard-
+// clamp near +-90 degrees, which turned out to trap it there instead of
+// letting the same restoring torque this file has always used settle it
+// the way yaw does -- see pitch_dynamics.cpp's updatePitchDynamics().
 // ============================================================
 
 // Always zero, same reasoning as computeGravityTorque: no net torque

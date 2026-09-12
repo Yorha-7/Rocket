@@ -56,7 +56,10 @@ int main() {
 
     SimulationConfig config;
     config.dt = 0.001;            // our integrator's step size, not part of the rocket's design
-    config.sim_duration = 120.0; // upper bound; the sim stops at ground contact regardless
+    config.sim_duration = 300.0; // upper bound; the sim stops at ground contact regardless.
+    // Was 120s -- too tight for a wide/high off-axis target (TVC-driven
+    // trajectories can end up in an extended near-horizontal glide after
+    // burnout, not a quick ballistic fall -- see Staging Notes).
 
     std::cout << "Loading rocket design and flight data from " << ork_path << "...\n";
     OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
@@ -131,8 +134,8 @@ int main() {
     // Navigation's MIN_TARGET_ALTITUDE_M ground-safety floor, and within
     // the kind of x/y range the TVC test sequence already showed this
     // vehicle's actuator authority can actually reach.
-    const Eigen::Vector3d NAV_TARGET(300.0, 0.0, 500.0);
-    Navigation navigation(NAV_TARGET);
+    const Eigen::Vector3d NAV_TARGET(0.0, 350.0, 1500.0);
+    Navigation navigation(NAV_TARGET, config.dt);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
               << ", " << NAV_TARGET.z() << ") m -- guidance law: point the nose at it, TVC does the rest\n";
 
@@ -189,11 +192,13 @@ int main() {
     // state -- not part of the integration itself, just recomputed from
     // the same physics for the Forces/Torque Analysis plots.
     std::vector<double> fx_vec(states.size(), 0.0), fy_vec(states.size(), 0.0), fz_vec(states.size(), 0.0);
+    std::vector<double> thrust_vec(states.size(), 0.0);
     std::vector<double> torque_gravity_vec(states.size(), 0.0);
     std::vector<double> torque_aero_vec(states.size(), 0.0);
     std::vector<double> torque_damping_vec(states.size(), 0.0);
     for (size_t i = 0; i < states.size(); ++i) {
         double thrust_i = (i < flight_data.thrust.size()) ? flight_data.thrust[i] : 0.0;
+        thrust_vec[i] = thrust_i;
         Eigen::Vector3d force = sim.computeNetForce(states[i], thrust_i);
         fx_vec[i] = force(0);
         fy_vec[i] = force(1);
@@ -219,14 +224,14 @@ int main() {
     }
     std::ofstream csv("rocket_trajectory.csv");
     csv << "time,x,y,height,velocity,pitch,yaw,ang_vel,ang_accel,"
-        << "fx,fy,fz,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg,"
+        << "fx,fy,fz,thrust,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg,"
         << "target_x,target_y,target_z\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(6);
         csv << time_vec[i] << "," << x_vec[i] << "," << y_vec[i] << "," << height_vec[i] << ","
             << velocity_vec[i] << ","
             << pitch_vec[i] << "," << yaw_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
-            << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << ","
+            << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << "," << thrust_vec[i] << ","
             << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << ","
             << gimbal_pitch_vec[i] << "," << gimbal_yaw_vec[i] << ","
             << NAV_TARGET.x() << "," << NAV_TARGET.y() << "," << NAV_TARGET.z() << "\n";
