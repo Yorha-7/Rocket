@@ -295,7 +295,7 @@ they all stay in sync with whatever flight was simulated last:
 | Script | What it shows | Run it |
 |---|---|---|
 | `scripts/plot_trajectory.py` | The 7-subplot flight-analysis figure — called automatically at the end of every `./build/rocket_cpp` run, not something you normally run by hand. | `python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_analysis.png` |
-| `scripts/trajectory.py` | An interactive, rotatable 3D flight path (mouse to orbit/zoom), with launch/apogee/impact/target markers and a pass/fail readout against the target. | `python3 scripts/trajectory.py rocket_trajectory.csv` |
+| `scripts/trajectory.py` | The control panel, not just a viewer: an interactive, rotatable 3D flight path (mouse to orbit/zoom) with launch/burnout/apogee/impact/target markers and a pass/fail readout, plus text boxes for target x/y/z and initial tilt/yaw and a Run button that launches a fresh (fast `--preview`) simulation and redraws in place. Pass a CSV path instead to fall back to a plain one-shot viewer, no controls. | `python3 scripts/trajectory.py` |
 | `scripts/tvc.py` | The commanded gimbal angle over time, pitch and yaw axes on separate panels — what the nozzle actually did, lag included. | `python3 scripts/tvc.py rocket_trajectory.csv` |
 | `scripts/x_force.py` | The net world-frame X-force over time (thrust + drag; gravity has no X-component) — useful for seeing exactly when the motor burns out. | `python3 scripts/x_force.py rocket_trajectory.csv` |
 | `scripts/make_axis_diagram.py` | Regenerates the coordinate-frame/TVC reference diagram used above — a docs utility, not a per-flight plot. | `python3 scripts/make_axis_diagram.py` |

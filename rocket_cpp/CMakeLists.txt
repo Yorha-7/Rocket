@@ -15,6 +15,8 @@ pkg_check_modules(TINYXML2 REQUIRED IMPORTED_TARGET tinyxml2)
 
 add_executable(rocket_cpp
     src/main.cpp
+    src/cli_args.cpp
+    include/cli_args.hpp
 
     # sim -- the physics engine (ground-truth simulation)
     src/sim/rocket_kinematics.cpp

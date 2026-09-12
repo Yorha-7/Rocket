@@ -3,6 +3,7 @@
 #include "ork/ork_loader.hpp"
 #include "sim/aerodynamics.hpp"
 #include "sim/mass_properties_model.hpp"
+#include "cli_args.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -10,28 +11,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <unistd.h>
-#include <climits>
-
-// ##### findProjectRoot() #####
-// Goal: work out where THIS repo actually lives on disk, instead of
-// hardcoding one machine's own absolute path -- reads /proc/self/exe
-// (the running binary's own real, resolved location, regardless of how
-// it was invoked or what the current directory happens to be) and walks
-// up from there. The executable always lives at <repo_root>/rocket_cpp/
-// build/rocket_cpp, so two levels up from its own directory is the repo
-// root.
-std::string findProjectRoot() {
-    char path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-    if (len == -1) return ".";  // fallback: trust the caller's own working directory
-    path[len] = '\0';
-
-    std::string exe_dir(path);
-    size_t last_slash = exe_dir.find_last_of('/');
-    exe_dir = (last_slash == std::string::npos) ? "." : exe_dir.substr(0, last_slash);
-
-    return exe_dir + "/..";  // build/ -> rocket_cpp/
-}
+#include <stdexcept>
 
 // ##### loadTvcTestSequence() #####
 // Goal: read data/tvc_test_sequence.csv (time-segment table: t_start_s,
@@ -70,7 +50,15 @@ std::vector<Eigen::Vector3d> loadTvcTestSequence(const std::string& csv_path, do
     return targets;
 }
 
-int main() {
+// ##### runSimulation() #####
+// Goal: the actual program logic, taking already-parsed args -- split
+// out from main() so main() can wrap this in a try/catch (below) and
+// report a clean error message + nonzero exit code instead of an
+// uncaught-exception abort when e.g. Navigation's constructor rejects a
+// bad target. That distinction matters once a caller (scripts/
+// trajectory.py's GUI) needs to tell "ran fine" from "bad input" apart
+// programmatically.
+int runSimulation(const CliArgs& args) {
     // ##### Load the rocket #####
     // Goal: pull geometry, launch conditions, and the full flight
     // history (thrust/mass over time) straight from the OpenRocket
@@ -81,30 +69,29 @@ int main() {
     const std::string ork_path = project_root + "/../artifacts/rocket.ork";
 
     SimulationConfig config;
-    config.dt = 0.001;            // our integrator's step size, not part of the rocket's design
-    // Upper bound only -- ground contact ends the sim earlier in the
-    // normal case. 300s (was 120s) gives room for a wide/high off-axis
-    // target's trajectory to actually finish (see README Staging Notes).
-    config.sim_duration = 300.0;
+    // Goal: --preview trades fidelity for speed -- meant for the GUI's
+    // interactive edit-run-look loop, not for trusted final numbers (see
+    // README). Plain runs (no flag) keep today's full-fidelity settings.
+    config.dt = args.preview ? 0.004 : 0.001;
+    config.sim_duration = args.preview ? 60.0 : 300.0;
 
     std::cout << "Loading rocket design and flight data from " << ork_path << "...\n";
     OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
 
     config.launch_height = rocket.launch_conditions.launch_height;
-    config.init_tilt = rocket.launch_conditions.init_tilt;
 
     // Goal: every simulation embedded in this .ork launches from a
     // dead-vertical rod, so with zero perturbation the pitch model would
-    // never have anything to restore from. Override with a small nonzero
-    // tilt so pitch dynamics actually show something real, not silent.
-    const double INIT_TILT_OVERRIDE_DEG = 0.0;
-    config.init_tilt = INIT_TILT_OVERRIDE_DEG;
+    // never have anything to restore from. Override with a (by default
+    // small, nonzero) tilt so pitch dynamics actually show something
+    // real, not silent -- now settable via --init-tilt instead of only
+    // by editing this file.
+    config.init_tilt = args.init_tilt_deg;
 
     // Goal: same idea for yaw -- the .ork has no yaw/azimuth concept at
     // all, so this is a fixed launch-azimuth deviation, not anything
-    // read from the design file.
-    const double INIT_YAW_OVERRIDE_DEG = 10.0;
-    config.init_yaw = INIT_YAW_OVERRIDE_DEG;
+    // read from the design file -- settable via --init-yaw.
+    config.init_yaw = args.init_yaw_deg;
 
     const RocketParams& params = rocket.params;
     const FlightData& flight_data = rocket.flight_data;
@@ -151,9 +138,9 @@ int main() {
               << "m, init_tilt=" << config.init_tilt
               << "deg, dt=" << config.dt << "s\n";
 
-    // Goal: fix the guidance target for this run -- hardcoded for now,
-    // no mission-planning input yet (staging-area scope).
-    const Eigen::Vector3d NAV_TARGET(0.0, 350.0, 1500.0);
+    // Goal: fix the guidance target for this run -- settable via
+    // --target, no mission-planning input beyond a single fixed point yet.
+    const Eigen::Vector3d NAV_TARGET(args.target_x, args.target_y, args.target_z);
     Navigation navigation(NAV_TARGET, config.dt);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
               << ", " << NAV_TARGET.z() << ") m -- guidance law: point the nose at it, TVC does the rest\n";
@@ -258,23 +245,45 @@ int main() {
     csv.close();
 
     // ##### Generate PNG plot via Python/matplotlib #####
-    std::cout << "\nGenerating plots via Python/matplotlib...\n";
-    if (in_project_root) {
-        int result = system("python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_analysis.png");
-        if (result != 0) {
-            std::cerr << "Warning: Python plot generation failed (matplotlib not installed?). Continuing...\n";
+    // Goal: skip this entirely under --no-plot -- a caller that's about
+    // to render its own plot in-process (scripts/trajectory.py's GUI)
+    // gains nothing from also paying for a second Python/matplotlib
+    // process here, every single run.
+    if (!args.no_plot) {
+        std::cout << "\nGenerating plots via Python/matplotlib...\n";
+        if (in_project_root) {
+            int result = system("python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_analysis.png");
+            if (result != 0) {
+                std::cerr << "Warning: Python plot generation failed (matplotlib not installed?). Continuing...\n";
+            } else {
+                std::cout << "Plots saved to rocket_analysis.png, rocket_trajectory.png\n";
+            }
         } else {
-            std::cout << "Plots saved to rocket_analysis.png, rocket_trajectory.png\n";
+            std::cerr << "Warning: Could not change to project root directory. Skipping plot.\n";
         }
-    } else {
-        std::cerr << "Warning: Could not change to project root directory. Skipping plot.\n";
     }
 
     // ##### Console summary #####
     std::cout << "\nApogee: " << h_apogee << " m at t=" << t_apogee << " s\n";
     std::cout << "Simulation complete.\n";
-    std::cout << "Results: rocket_trajectory.csv, rocket_analysis.png, rocket_trajectory.png\n";
+    std::cout << "Results: rocket_trajectory.csv"
+              << (args.no_plot ? "" : ", rocket_analysis.png, rocket_trajectory.png") << "\n";
     std::cout << "Ground termination: stops when z < 0\n";
 
     return 0;
+}
+
+// ##### main() #####
+// Goal: parse CLI args, run the simulation, and turn any thrown
+// exception (e.g. Navigation rejecting a target too close to the
+// ground) into a clean stderr message + nonzero exit code -- not an
+// uncaught-exception abort -- so a caller like scripts/trajectory.py's
+// GUI can detect and report failure cleanly via the exit code.
+int main(int argc, char** argv) {
+    try {
+        return runSimulation(parseArgs(argc, argv));
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+    }
 }
