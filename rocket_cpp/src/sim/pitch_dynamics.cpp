@@ -96,35 +96,9 @@ double RocketKinematics::computePitchAcceleration(double total_torque,
 }
 
 // Integrate: torque -> angular acceleration -> angular velocity -> pitch
-// angle. Mass properties are recomputed from the vehicle's current mass
-// (propellant burns down) and our cached Barrowman CP each step.
-//
-// Pitch used to hard-clamp orientation(1) to +-85 degrees for the WHOLE
-// flight -- added as a numerical safety net against a bad transient
-// right at ignition, per the original comment, but never actually
-// scoped to just that window. In practice that meant it did something
-// its own comment never intended: once a real (not transient-glitch)
-// flight pushed pitch up against that wall -- e.g. sustained TVC
-// saturation building a mostly-horizontal velocity, see README Staging
-// Notes -- the clamp TRAPPED the vehicle there instead of letting
-// computeAerodynamicMoment's restoring torque keep tracking the actual
-// velocity vector past 90 degrees, the way it's always free to for yaw
-// (yaw_dynamics.cpp has never clamped its angle, only wrapped it).
-//
-// Tried removing the clamp entirely to match yaw -- confirmed the trap
-// really was the problem, but also uncovered a second, real issue:
-// fully unclamped, a large enough excursion can spin up faster than the
-// (already-known-weak, see Staging Notes) damping torque and
-// computeAerodynamicMoment's own stall saturation (alpha capped at
-// +-0.5 rad) can arrest, so the vehicle can end up genuinely tumbling
-// (measured: >190 degrees, >450 deg/s) instead of settling. Fixing that
-// properly means retuning the aerodynamic model, out of scope here --
-// so the clamp is back, but scoped to ONLY the actual ignition window
-// its comment always claimed (elapsed_time_s_ tracks that, see
-// rocket_kinematics.hpp), not the entire flight. Pitch is free to wrap
-// like yaw once clear of it; a trajectory that tumbles after that is a
-// real (if extreme) finding about this vehicle's damping, not something
-// papered over by an angle wall.
+// angle, each clamped to a physically sane range. Mass properties are
+// recomputed from the vehicle's current mass (propellant burns down) and
+// our cached Barrowman CP each step.
 void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState& state) const {
     MassProperties mp = mass_model_.computeAt(state.mass);
     mp.cp_location_cm = cp_location_cm_;
@@ -137,18 +111,10 @@ void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState&
     const double MAX_ANGULAR_VEL = 10.0;  // rad/s
     next.angular_vel(1) = std::max(-MAX_ANGULAR_VEL, std::min(MAX_ANGULAR_VEL, next.angular_vel(1)));
 
-    next.orientation(1) = fmod(state.orientation(1) + next.angular_vel(1) * config_.dt, 2 * M_PI);
+    next.orientation(1) = state.orientation(1) + next.angular_vel(1) * config_.dt;
 
-    // Ignition-transient guard, and ONLY that -- see this function's doc
-    // comment. 0.1s is generous relative to how fast this vehicle's
-    // motor actually ramps up (0 to ~70N in ~0.05s, per the .ork's own
-    // thrust curve), so it covers the real transient without lingering
-    // into the rest of the flight the way the old whole-flight clamp did.
-    const double IGNITION_TRANSIENT_S = 0.1;
-    if (elapsed_time_s_ <= IGNITION_TRANSIENT_S) {
-        const double MAX_PITCH = 1.5;  // ~85 degrees
-        next.orientation(1) = std::max(-MAX_PITCH, std::min(MAX_PITCH, next.orientation(1)));
-    }
+    const double MAX_PITCH = 1.5;  // ~85 degrees
+    next.orientation(1) = std::max(-MAX_PITCH, std::min(MAX_PITCH, next.orientation(1)));
 }
 
 // Same mass properties/torque math as updatePitchDynamics, but returns

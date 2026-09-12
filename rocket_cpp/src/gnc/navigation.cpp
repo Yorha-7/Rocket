@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-Navigation::Navigation(const Eigen::Vector3d& target_position, double dt) : target_position_(target_position) {
+Navigation::Navigation(const Eigen::Vector3d& target_position) : target_position_(target_position) {
     if (target_position.z() <= MIN_TARGET_ALTITUDE_M) {
         // Fail at construction, not mid-flight -- a bad target should
         // never even get to fly.
@@ -13,107 +13,39 @@ Navigation::Navigation(const Eigen::Vector3d& target_position, double dt) : targ
             "m, minimum " + std::to_string(MIN_TARGET_ALTITUDE_M) +
             "m) -- aiming the nose there means aiming thrust into the ground.");
     }
-
-    // Position-estimator gains, sized once from this project's own real
-    // sensor numbers -- see estimatePosition()'s doc comment.
-    computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_HORIZONTAL_SIGMA_M, dt, horizontal_alpha_, horizontal_beta_);
-    computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_VERTICAL_SIGMA_M, dt, vertical_alpha_, vertical_beta_);
-}
-
-// Steady-state alpha/beta relation for a g-h filter (Wikipedia, "Alpha
-// beta filter"): given the ratio of process uncertainty to measurement
-// uncertainty (lambda), this is the closed-form gain pair that balances
-// noise rejection against tracking lag, instead of hand-picked constants.
-void Navigation::computeAlphaBeta(double sigma_process, double sigma_meas, double dt,
-                                   double& alpha, double& beta) {
-    double lambda = sigma_process * dt * dt / sigma_meas;
-    double r = (4.0 + lambda - std::sqrt(8.0 * lambda + lambda * lambda)) / 4.0;
-    alpha = 1.0 - r * r;
-    beta = 2.0 * (2.0 - alpha) - 4.0 * std::sqrt(1.0 - alpha);
-}
-
-// Blends the noisy GPS fix with the accelerometer's own double-integrated
-// motion -- an alpha-beta (g-h) filter, "acceleration-aided": the
-// prediction step uses the accelerometer's actual measured acceleration
-// each step rather than assuming constant velocity the way a textbook
-// alpha-beta filter does, since a real measurement is available instead
-// of nothing. R is the current body->world rotation (shared with the
-// caller so this doesn't rebuild it a second time).
-Eigen::Vector3d Navigation::estimatePosition(const sensors::Gps& gps, const sensors::Gyro& gyro,
-                                              const Eigen::Matrix3d& R, double dt) {
-    if (!position_filter_initialized_) {
-        // Bootstrap from the first GPS fix -- Navigation has no other
-        // source of an absolute starting position, it only ever sees
-        // sensor readings, never the launch pad's true coordinates.
-        fused_position_ = gps.readPosition();
-        fused_velocity_ = Eigen::Vector3d::Zero();
-        position_filter_initialized_ = true;
-        return fused_position_;
-    }
-
-    // Undo what Gyro::update() did to build readAccel(): rotate the
-    // (noisy) proper acceleration back to world frame, then add gravity
-    // back to recover total kinematic acceleration -- the quantity that
-    // actually integrates into velocity/position.
-    const double g0 = 9.80665;
-    Eigen::Vector3d gravity_world(0, 0, -g0);
-    Eigen::Vector3d total_accel_world = R * gyro.readAccel() + gravity_world;
-
-    // Predict from the accelerometer alone -- accurate over one short
-    // dt, but the double integration drifts without bound if left
-    // uncorrected (accelerometer bias, double-integrated, is exactly the
-    // kind of error that grows unchecked -- see Staging Notes).
-    fused_velocity_ += total_accel_world * dt;
-    Eigen::Vector3d predicted_position = fused_position_ + fused_velocity_ * dt;
-
-    // Correct BOTH position and velocity from the GPS residual -- the
-    // classic alpha-beta update. Correcting velocity too (not just
-    // position) is what keeps fused_velocity_ from drifting away
-    // unbounded between GPS corrections; a position-only blend would
-    // still leave the velocity state free-running.
-    Eigen::Vector3d residual = gps.readPosition() - predicted_position;
-    Eigen::Vector3d alpha(horizontal_alpha_, horizontal_alpha_, vertical_alpha_);
-    Eigen::Vector3d beta(horizontal_beta_, horizontal_beta_, vertical_beta_);
-    fused_position_ = predicted_position + alpha.cwiseProduct(residual);
-    fused_velocity_ = fused_velocity_ + beta.cwiseProduct(residual) / dt;
-
-    return fused_position_;
 }
 
 Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro, double dt) {
-    // Attitude is needed both to fuse the accelerometer into the position
-    // estimate below and to rotate the target direction into body frame
-    // further down -- computed once here, shared by both instead of
-    // rebuilding it twice.
+    // Below the activation floor: hold neutral and keep the integrators
+    // at zero, so whenever guidance DOES activate it starts from a clean
+    // slate instead of carrying windup accumulated while it was sitting
+    // idle on the pad (see class doc comment for why this floor exists).
+    if (gps.readPosition().z() < ACTIVATION_ALTITUDE_M) {
+        integral_pitch_ = 0.0;
+        integral_yaw_ = 0.0;
+        return Eigen::Vector3d(0, 0, 1);
+    }
+
+    // Straight-line vector from where GPS says we are to the target,
+    // still in world frame (north/east/up) at this point.
+    Eigen::Vector3d to_target_world = target_position_ - gps.readPosition();
+
+    if (to_target_world.norm() < 1e-6) {
+        return Eigen::Vector3d(0, 0, 1);  // already there -- hold neutral, nothing to aim at
+    }
+
+    // Only orientation matters below (rocketToNedFrame is a pure function
+    // of it) -- build a throwaway state rather than a one-off overload.
     RocketState orientation_state{};
     orientation_state.position = Eigen::Vector3d::Zero();      // unused by rocketToNedFrame
     orientation_state.velocity = Eigen::Vector3d::Zero();      // unused
     orientation_state.angular_vel = Eigen::Vector3d::Zero();   // unused
     orientation_state.mass = 0.0;                              // unused
     orientation_state.orientation = gyro.readOrientation();    // the one field that matters
+
+    // Body<-world rotation for the CURRENT attitude (shared formula, not
+    // a second hand-copied DCM -- see rocket_kinematics.hpp).
     Eigen::Matrix3d R = RocketKinematics::rocketToNedFrame(orientation_state);
-
-    // Fused GPS+accelerometer estimate, not the raw GPS fix -- see
-    // estimatePosition()'s doc comment and the class doc comment for why.
-    Eigen::Vector3d position = estimatePosition(gps, gyro, R, dt);
-
-    // Below the activation floor: hold neutral and keep the integrators
-    // at zero, so whenever guidance DOES activate it starts from a clean
-    // slate instead of carrying windup accumulated while it was sitting
-    // idle on the pad (see class doc comment for why this floor exists).
-    if (position.z() < ACTIVATION_ALTITUDE_M) {
-        integral_pitch_ = 0.0;
-        integral_yaw_ = 0.0;
-        return Eigen::Vector3d(0, 0, 1);
-    }
-
-    // Straight-line vector from the fused position estimate to the
-    // target, still in world frame (north/east/up) at this point.
-    Eigen::Vector3d to_target_world = target_position_ - position;
-
-    if (to_target_world.norm() < 1e-6) {
-        return Eigen::Vector3d(0, 0, 1);  // already there -- hold neutral, nothing to aim at
-    }
 
     // R rotates body->world, so its transpose (= inverse, R is a pure
     // rotation) takes our world-frame aim vector into body frame.

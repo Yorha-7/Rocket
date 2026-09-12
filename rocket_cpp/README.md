@@ -649,136 +649,16 @@ capability gap (see Staging Notes).
 4. **`I_xx` (roll inertia) is a coarse thin-shell/point estimate** in
    `VehicleMassModel` — fine for now since nothing reads it (no roll torque
    model yet), but should be revisited before any roll dynamics are added.
-5. **Sensors now have a real noise model, but update-rate limiting is
-   still missing.** `Gyro`/`Baro`/`Gps` add white noise plus a slowly
-   drifting bias (`GaussMarkovNoise`) grounded in real numbers — the
-   actual MPU-9250 datasheet for the gyro/accel, general literature for
-   GPS/baro (see `gnc/sensors.hpp`) — but every sensor still reads every
-   physics step with no rate limit. `Gyro::readOrientation()` is still a
-   bare pass-through of true attitude, deliberately: a real IMU doesn't
-   give absolute attitude for free, that needs integrating/fusing the
-   rates (or a magnetometer, deliberately left out), which isn't built.
-6. **`Navigation` now runs a real per-axis PID** (`Kp=1, Ki=0.6, Kd=0` —
-   see its class comment for how these were tuned, and why `Kd` measurably
-   hurts here). Still one fixed target for the whole flight, no in-flight
-   retargeting, no terminal guidance phase. TVC's actuator limit is
-   `±30°` (`ThrustVectorControl::MAX_GIMBAL_DEG`).
-7. **GPS noise's correlation time (60s) is comparable to the whole flight
-   (~25s)**, so for any single flight it behaves like a near-constant
-   several-meter miscalibration rather than noise that averages out — and
-   because the guidance law's angular error is a normalized ratio, that
-   fixed offset produces a large, *persistent* angular error whenever the
-   vehicle happens to be close to the target, not brief jitter a filter
-   could remove. Measured: gimbal saturation at the `±30°` limit rose from
-   ~40% to ~84-89% of the flight once GPS noise was added, while accuracy
-   stayed statistically unchanged (closest approach ~48m either way,
-   averaged over repeated noise draws) — a real, known limitation of
-   steering off one noisy absolute-position fix with nothing else backing
-   it up, not a gain-tuning bug.
-8. **`Navigation` now fuses GPS with the accelerometer** (an
-   "acceleration-aided" alpha-beta/g-h filter, `estimatePosition()` in
-   `gnc/navigation.cpp`, gains derived from real sensor numbers, not
-   hand-picked) rather than reading raw GPS straight into the PID. Tested
-   head-to-head against raw GPS on the identical scenario (8 runs each):
-   mean closest-approach was statistically unchanged (61.9m raw vs. 62.4m
-   fused) — confirming #7 above, no filter can reject a persistent bias
-   in the only absolute-position sensor available — but run-to-run
-   variance dropped ~10x (std 2.0m → 0.2m). That's the real, honest
-   benefit: a far more repeatable guided trajectory, not better average
-   accuracy. A genuine bias-rejecting fix would need a second independent
-   *absolute* reference, which this vehicle doesn't carry.
-9. **`simulate()` used to silently cut a flight short if it outlived the
-   `.ork`'s own flight-data array** (`n_steps` was clamped to
-   `flight_data.time.size()`, not just to the requested `sim_duration`)
-   — found via a wide/high off-axis target (`(400, 150, 900)`) whose
-   flight genuinely outlasted the `.ork`'s ~45s of recorded thrust/mass
-   data, so the loop just stopped mid-air at ~530m, which plotting
-   scripts then mislabeled "Impact". Fixed: `n_steps` now comes from
-   `sim_duration` alone, and thrust/mass read as 0/dry-mass past the
-   recorded data's end (real motors don't restart or un-burn propellant).
-   That exposed a second, real finding underneath it: even with the array
-   clamp gone, that same scenario didn't reach the ground until t=124s —
-   post-burnout, the vehicle settled into an extended near-horizontal
-   glide (pitch pinned at the `MAX_PITCH` ~86° safety clamp for tens of
-   seconds, over 10 km of horizontal travel) rather than a quick ballistic
-   fall, because its nose weathercocked to align with a mostly-horizontal
-   velocity vector built up from sustained `±30°` TVC saturation before
-   burnout. `main.cpp`'s `sim_duration` raised from 120s to 300s to give
-   flights like this room to actually finish. Not obviously a bug in the
-   pitch model itself — a legitimate (if extreme) outcome of this sim's
-   decoupled pitch/yaw dynamics reacting to a very aggressive target — but
-   worth knowing before trusting a "did it reach the ground yet" check on
-   an unusual trajectory.
-10. **That same extended-glide trajectory (#9) turned out to be a genuine,
-    multi-cycle phugoid oscillation**, not a single dip: height after
-    apogee goes 2170m -> min 537m (t=47.5) -> max 1051m (t=64.5) -> min
-    182m (t=90.8) -> max 428m (t=107.4) -> ground, each swing smaller than
-    the last. Verified this isn't an energy-conservation bug two ways:
-    specific mechanical energy (`0.5*v^2 + g*h`) drops monotonically in
-    aggregate across the whole ~103,680-step post-apogee flight (from
-    ~21,700 J/kg to ~30 J/kg); the individual steps that technically
-    ticked energy *up* (8202 of them, explicit Euler doesn't exactly
-    conserve energy for a nonlinear system, unlike a symplectic
-    integrator — see "Integration" above) sum to only 120.6 J/kg total
-    against 21,790.5 J/kg of real loss, i.e. <1% and nowhere near enough
-    to explain 500m+ swings. The swings themselves are a real, named
-    flight-dynamics phenomenon (phugoid: pitch-stable body trading speed
-    for altitude and back, weakly damped so it rings instead of settling)
-    — and the reason it's THIS dramatic here, rather than a minor wobble,
-    traces straight back to #3's already-measured weak pitch/yaw
-    aerodynamic damping (same `c_damp` formula, previously quantified at
-    ζ≈0.003 for yaw). A better-damped vehicle wouldn't ring like this.
-11. **Traced #10's phugoid to its actual root cause: pitch used to
-    hard-clamp at `MAX_PITCH` (~85°) for the ENTIRE flight**, not just the
-    ignition transient its own comment claimed it guarded. Yaw has never
-    clamped, only wrapped (`fmod`) — confirmed that asymmetry, not any
-    real physical difference between the axes, was why yaw could settle a
-    wild excursion (its own early swings hit 45-158° before damping back
-    under 2° by t=40s) while pitch got trapped at its wall instead of
-    letting `computeAerodynamicMoment`'s restoring torque keep tracking
-    the vehicle's real (extreme but legitimate) velocity vector past 90°.
-    Fixed in two steps: pitch now wraps like yaw does, and the angle
-    clamp is scoped to only the true ignition window (`elapsed_time_s_ <=
-    0.1s`, tracked on `RocketKinematics`) instead of the whole flight —
-    matching what the original comment always said it was for.
-    **But fully unclamping past ignition exposed a second, real problem**:
-    for this aggressive a target, pitch doesn't settle once free — it
-    tumbles (measured: 182-193°, up to 475°/s, never reaching the ground
-    in 300s). The restoring torque saturates past ~28.6° angle of attack
-    (`alpha_limited` in `computeAerodynamicMoment`, a physically-motivated
-    stall cap) and, combined with the already-known weak damping, isn't
-    strong enough to arrest a large enough excursion once unclamped. Yaw
-    never hit this because its swings stayed inside the unsaturated
-    range. Left open deliberately — fixing it for real means retuning the
-    aerodynamic damping/stall model, not another clamp; scoping the
-    ignition clamp correctly was the honest fix for what it actually was,
-    not a fix for this deeper, separate finding.
-12. **#11's "tumbling" turned out not to be a damping/stall problem at
-    all — it was a real, serious, pre-existing bug in `computeNetForce()`**
-    that #11's fix only happened to expose. `drag_ned = R * drag_neg` was
-    rotating an ALREADY world-frame vector (`drag_neg`, built straight
-    from `state.velocity`, which has always been world-frame — see
-    `RocketState`'s own doc comment) through the body->world rotation
-    matrix a second time. Mostly harmless whenever the vehicle's attitude
-    stays close to its velocity direction (weathercocking usually keeps
-    it there), which is why every earlier scenario this session looked
-    physically clean. But during a fast, wide pitch swing -- exactly what
-    #11 unlocked -- attitude and velocity direction can diverge sharply,
-    and double-rotating drag through the wrong matrix can flip it from
-    opposing velocity to reinforcing it. Measured before the fix: post-
-    burnout trough velocities of 922-968 m/s (Mach 2.7+, growing every
-    cycle) and 125,046/247,486 post-apogee steps with energy *increasing*
-    — not Euler noise, a real net energy source, up to 2313 N of
-    unphysical force on a 552g vehicle at one recorded instant. Fixed by
-    using `drag_neg` directly (no rotation -- it was never in body frame
-    to begin with); only `thrust_ned = R * thrust_body` genuinely needed
-    the rotation, since gimbal-commanded thrust really is body-frame.
-    Verified after the fix: zero energy-increasing steps across the
-    entire post-apogee flight (was 125,046), max post-apogee velocity
-    down to 107 m/s, clean ground contact at t=48.9s instead of running
-    out the full 300s budget still airborne. #10's earlier "verified, not
-    a bug" phugoid finding was real *for that specific scenario*, where
-    attitude happened to stay close enough to velocity direction that
-    this bug's effect stayed small -- not wrong, just working with data
-    quietly corrupted by a latent bug that hadn't been triggered hard
-    enough yet to be visible.
+5. **Sensors have no error model.** `Gyro`/`Baro`/`Gps` read the true
+   `RocketState` directly — no noise, bias, drift, or update-rate limiting.
+   `Gyro::readOrientation()` in particular is a bigger simplification than
+   it looks: real IMUs don't give absolute attitude for free, that needs
+   integrating/fusing the rates (or a magnetometer, deliberately left out
+   — see `gnc/sensors.hpp`), which isn't built.
+6. **`Navigation` is genuinely open-loop "point and shoot"** — one fixed
+   target for the whole flight, no in-flight retargeting, no terminal
+   guidance phase, no PID (deliberately — see its class comment). It will
+   miss by a wide margin if the launch tilt points the vehicle far enough
+   off-target that TVC's `±12°` authority can't correct it in time (made
+   worse by #3's yaw damping) — expected behavior for this guidance law,
+   not a bug to fix by adding a smarter one without being asked.

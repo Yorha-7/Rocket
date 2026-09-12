@@ -322,21 +322,9 @@ Worth knowing before trusting any number out of it:
   unpowered, ballistic coasting no gimbal command can affect. Worth
   knowing before reading too much into how "precise" any single demo run
   looks.
-- **GPS noise, once added, exposed a real limitation — partially, not
-  fully, addressed.** Sensors carry a real noise model grounded in actual
-  hardware specs (see [Stage 3](#stage-3--gnc-sensors-guidance-and-the-gimbal)).
-  GPS error drifts over a ~60-second correlation time — comparable to
-  this vehicle's whole ~25-second flight — so within any single flight it
-  acts like a near-constant few-meter miscalibration rather than noise
-  that averages out. `Navigation` now fuses that noisy GPS fix with the
-  accelerometer (an alpha-beta filter, gains derived from real sensor
-  numbers) instead of reading raw GPS — tested head-to-head, it makes the
-  guided trajectory ~10x more repeatable run to run, but doesn't improve
-  *average* accuracy, because no amount of filtering can reject a
-  persistent bias in the only absolute-position sensor available. That's
-  the same limitation every real GPS-only guided system has without a
-  second independent sensor backing it up — see `rocket_cpp/README.md`'s
-  Staging Notes for the full writeup.
+- **Sensors have no noise model yet.** They currently read the
+  simulation's own true state directly — realistic in interface, not yet
+  in behavior.
 
 None of these are hidden — see
 **[`rocket_cpp/README.md`](./rocket_cpp/README.md#staging-notes)** for the
