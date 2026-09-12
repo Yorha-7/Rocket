@@ -19,6 +19,8 @@ def plot_trajectory_3d(csv_path):
     x = df['x'].values
     y = df['y'].values
     z = df['height'].values
+    has_thrust = 'thrust' in df.columns
+    thrust = df['thrust'].values if has_thrust else None
 
     # Trim at ground impact, same rule as plot_trajectory.py: first
     # near-zero height sample after apogee.
@@ -27,6 +29,18 @@ def plot_trajectory_3d(csv_path):
     if len(impact_candidates) > 0:
         impact_idx = apogee_idx + impact_candidates[0]
         t, x, y, z = t[:impact_idx + 1], x[:impact_idx + 1], y[:impact_idx + 1], z[:impact_idx + 1]
+        if has_thrust:
+            thrust = thrust[:impact_idx + 1]
+
+    # Burnout: last sample with meaningful thrust (0.01 N -- comfortably
+    # above zero but below anything a real motor's tail-off would read as
+    # "still burning"). Only present in CSVs from a build that logs the
+    # thrust column -- older CSVs just skip this marker rather than erroring.
+    burnout_idx = None
+    if has_thrust:
+        powered = np.where(thrust > 0.01)[0]
+        if len(powered) > 0:
+            burnout_idx = powered[-1]
 
     fig = plt.figure(figsize=(9, 8))
     ax = fig.add_subplot(111, projection='3d')
@@ -36,6 +50,9 @@ def plot_trajectory_3d(csv_path):
     ax.plot(x, y, z, color='gray', lw=0.5, alpha=0.6)
 
     ax.plot([x[0]], [y[0]], [z[0]], 'go', ms=8, label='Launch')
+    if burnout_idx is not None:
+        ax.plot([x[burnout_idx]], [y[burnout_idx]], [z[burnout_idx]], marker='X', color='#e67e22',
+                 ms=10, linestyle='None', label='Burnout', zorder=10)
     ax.plot([x[apogee_idx]], [y[apogee_idx]], [z[apogee_idx]], 'r^', ms=8, label='Apogee')
     ax.plot([x[-1]], [y[-1]], [z[-1]], 'ko', ms=8, label='Impact')
 
