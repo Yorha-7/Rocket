@@ -24,8 +24,12 @@ interactive 3D viewer (`scripts/trajectory.py`) is also available on demand.
 - **Thrust vector control**: a two-axis gimbal actuator (first-order lag,
   travel-limited) that genuinely deflects thrust direction each step — see
   [Thrust Vector Control](#thrust-vector-control).
-- **Closed-loop guidance**: `Navigation` reads simulated `Gps`/`Gyro`
-  sensors and steers TVC to point the nose at a fixed target — see
+- **Closed-loop guidance, split into path planning + per-tick steering**:
+  `navigation::Navigation` breaks one final target into a straight-line
+  sequence of nearby waypoints; `navigation::NavigationStep` reads
+  simulated `Gps`/`Gyro` sensors (with a real noise model, fused through
+  an alpha-beta position estimator) and steers TVC toward whichever
+  waypoint is current via a per-axis PID — see
   [Sensors & Navigation](#sensors--navigation).
 - Ground-contact termination with exact linear-interpolated impact point.
 
@@ -159,43 +163,149 @@ same historical deflection the integrator actually used at that instant.
 ```
 rocket_cpp/
 ├── include/gnc/
-│   ├── sensors.hpp      namespace sensors { Gyro, Baro, Gps }
-│   └── navigation.hpp   Navigation
+│   ├── sensors.hpp          namespace sensors { Gyro, Baro, Gps }
+│   └── navigation.hpp       namespace navigation { NavigationStep, Navigation }
 └── src/gnc/
     ├── sensors.cpp
-    └── navigation.cpp
+    ├── navigation.cpp       Navigation      -- the path planner
+    └── navigation_step.cpp  NavigationStep  -- the per-tick PID controller
 ```
 
 Simulated flight-computer sensors, each reading straight from the true
-`RocketState` — no noise/bias/drift modeled yet, just the `update()` then
-`read...()` shape real sensor drivers use. One class per physical sensor
-(mirrors a real flight computer's separate parts), namespaced under
-`sensors` rather than one do-everything class:
+`RocketState` and adding a real noise model on top (white noise + a
+slowly drifting bias, grounded in real numbers — the actual MPU-9250
+datasheet for the gyro/accel, general literature for GPS/baro; see
+`gnc/sensors.hpp`). One class per physical sensor (mirrors a real flight
+computer's separate parts), namespaced under `sensors` rather than one
+do-everything class:
 
 | Class | Method | Purpose |
 |---|---|---|
-| `sensors::Gyro` | `update(state, prev_state, dt)` | computes proper (specific) acceleration — total minus gravity, since an accelerometer's proof mass doesn't feel gravity — and angular acceleration, both body frame |
-| | `readAccel()` / `readAngularAccel()` | m/s², rad/s² |
+| `sensors::Gyro` | `update(state, prev_state, dt)` | computes proper (specific) acceleration — total minus gravity, since an accelerometer's proof mass doesn't feel gravity — and angular acceleration, both body frame, each with noise added |
+| | `readAccel()` / `readAngularAccel()` / `readAngularVel()` | m/s², rad/s², rad/s |
 | | `readOrientation()` | true `(roll,pitch,yaw)` passthrough — a stand-in for real attitude estimation (gyro/accel fusion), not built yet |
-| `sensors::Baro` | `update(state)`, `readPressure()`, `readAltitude()` | ISA pressure at true altitude; derived altitude matches true altitude exactly since no sensor error is modeled yet |
-| `sensors::Gps` | `update(state)`, `readPosition()` | world-frame position fix |
+| `sensors::Baro` | `update(state)`, `readPressure()`, `readAltitude()` | ISA pressure at true altitude, plus noise/drift |
+| `sensors::Gps` | `update(state)`, `readPosition()` | world-frame position fix, plus noise/drift (60s correlation time — see [Staging Notes](#staging-notes) #7) |
 
-`Navigation` is the classic, deliberately un-smart guidance law: **point
-the nose at a fixed target**, no PID, no trajectory optimization.
-`ThrustVectorControl`'s own actuator lag is the only closed-loop dynamics
-involved — stacking a second controller on top would compound lag on lag
-and slow the response down, not help it.
+**`navigation::Navigation` is the path planner** — given the ONE final
+target the rest of the codebase (`main.cpp`'s `--target`,
+`scripts/trajectory.py`'s GUI) ever talks about, it lays out a
+straight-line sequence of waypoints spaced `WAYPOINT_STEP_M` (50m) apart
+and walks a `NavigationStep` through them one at a time, advancing once
+the fused position estimate comes within `WAYPOINT_ARRIVAL_RADIUS_M`
+(25m) of the current one. A stepping stone for a real curved path
+planner later — today it always optimizes for shortest distance (a
+line). This is also *why* one PID gain set can cover both a close-to-pad
+target and a far downrange one: `NavigationStep` never sees the real
+distance, only "the next waypoint," so every step looks like the same
+kind of local steering problem.
 
 | Method | Purpose |
 |---|---|
-| `Navigation(target_position)` | ctor — world-frame aim point, fixed for the flight (hardcoded by the caller, e.g. `main.cpp`'s `NAV_TARGET`; no in-flight retargeting yet). **Throws `std::invalid_argument`** if `target_position.z() <= 10.0` — not an "out of bounds" check, aiming the nose (and thrust) at/into the ground is unsurvivable regardless of how "in range" the coordinates look |
-| `computeTvcTarget(gps, gyro)` | **public** — `target − gps.readPosition()` (world frame), rotated into body frame via `RocketKinematics::rocketToNedFrame(gyro.readOrientation())`. Stateless — no integral term, no memory between calls |
+| `Navigation(final_target, dt, kp=1.0, ki=0.6, kd=0.0)` | ctor — validates `final_target` (**throws `std::invalid_argument`** if `z() <= 10.0m` — aiming the nose/thrust there is unsurvivable), builds the waypoint list, constructs its own internal `NavigationStep` aimed at the first waypoint. Gains forward straight through, for the GA tuner below |
+| `computeTvcTarget(gps, gyro, dt)` | **public** — drives the current waypoint's `NavigationStep`, then advances to the next waypoint once close enough |
+| `waypointCount()` | how many waypoints this target actually produced (1 for a close target, dozens for a far one) |
+
+**`navigation::NavigationStep` is the per-tick controller** — point the
+nose at whatever target it's currently pointed at, shaped by a real
+per-axis PID (`Kp=1, Ki=0.6, Kd=0` defaults — see its class comment for
+how these were grid-searched, and why `Kd` measurably hurts here) rather
+than commanding the raw angular error straight through.
+`ThrustVectorControl`'s own actuator lag is the only OTHER closed-loop
+dynamics involved. It doesn't read raw GPS — it reads a FUSED position
+estimate (an "acceleration-aided" alpha-beta/g-h filter blending the
+noisy GPS fix with the accelerometer's own double-integrated motion; see
+[Staging Notes](#staging-notes) #8) — and stays neutral below
+`ACTIVATION_ALTITUDE_M` (2m), right off the pad.
+
+| Method | Purpose |
+|---|---|
+| `NavigationStep(target, dt, kp, ki, kd)` | ctor — no ground-safety check (that's `Navigation`'s job — see above); trusts whatever target/gains it's given |
+| `setTarget(target)` | retarget mid-flight — `Navigation` calls this when it advances to the next waypoint |
+| `computeTvcTarget(gps, gyro, dt)` | **public** — the actual PID decision, body-frame direction for `ThrustVectorControl::commandForceDirection` |
+| `lastEstimatedPosition()` | the fused position filter's latest estimate, exposed so `Navigation` can judge waypoint-arrival distance without duplicating the filter |
 
 Plugs into `RocketKinematics::simulate(time, flight_data, {}, &navigation)`
 — see the method reference above. `main.cpp` writes the target into
 `rocket_trajectory.csv` (`target_x/y/z` columns) so `scripts/trajectory.py`
 can show whether it was actually reached (see
 [Visualize a trajectory](#visualize-a-trajectory)).
+
+### Tuning `NavigationStep`'s gains with a genetic algorithm
+
+```
+rocket_cpp/
+├── include/tuning/
+│   └── pid_ga_tuner.hpp   namespace tuning { Param, ParamSpec, SharedGains, fitness(), runAllThreeGAs() }
+└── src/tuning/
+    ├── main.cpp             loads the rocket, calls runAllThreeGAs()
+    ├── pid_ga_tuner.cpp     ParamSpec/encode/decode/fitness()
+    └── pid_ga_runner.cpp    the actual GA -- genetic operators, per-generation loop, threading, progress
+```
+
+```bash
+./build/pid_ga_tuner
+```
+
+An offline search tool, separate from the flight computer (its own
+`add_executable` target in `CMakeLists.txt`, sharing everything else via
+the `ROCKET_CORE_SOURCES` variable). Three independent genetic
+algorithms — one per gain — each running on its own `std::thread`,
+**coordinating through a shared, atomic `(Kp, Ki, Kd)` triple**: while
+the Kp-GA is evolving Kp, it scores each candidate using whatever the
+Ki-GA/Kd-GA have found best *so far* (possibly a generation or so stale,
+by design — exact lockstep between three concurrent searches isn't
+needed for a heuristic like this), not a value frozen at the baseline.
+
+- **Encoding**: each gain is one byte (`uint8_t`, 256 discrete levels,
+  `tuning::encode`/`decode` linearly mapping it onto that gain's own
+  `[min, max]` — see `ParamSpec`) — plenty of resolution for how narrow
+  this search space is, and keeps every genetic operator a handful of
+  bit operations.
+- **Population**: seeded with `ParamSpec`'s own baseline constant (still
+  hardcoded to the original grid-searched `1.0`/`0.6`/`0.0` in
+  `pid_ga_tuner.cpp`, independently of whatever `NavigationStep`'s own
+  constructor defaults currently are — see the note at the end of this
+  section) plus random bytes filling out the rest of `POPULATION_SIZE`.
+- **Every generation, no random discarding**: `generateSwarm()`
+  enumerates *every* pair of parents × *every* single-point crossover
+  position × both crossover directions × the child itself and *every*
+  single-bit mutation of it — the full combinatorial set, not one
+  randomly chosen mating outcome. This is also why `POPULATION_SIZE` and
+  `N_GENERATIONS` (top of `pid_ga_runner.cpp`) both need to stay small —
+  the combinatorics grow as roughly `POPULATION_SIZE²`, and get large
+  fast (e.g. population 15 → 13,230 candidates *per generation, per
+  parameter*).
+- **Fitness**: builds one short flight (`tuning::fitness()`) through
+  `navigation::Navigation` aimed at a single close, fixed local target
+  (`LOCAL_HOP_TARGET`, closer than `Navigation`'s own `WAYPOINT_STEP_M`,
+  so it always collapses to exactly one waypoint — this tunes
+  `NavigationStep`'s own steering law directly, not the path planner),
+  scored `1/(closest_approach + 1.0)` — higher is better, finite even as
+  the miss distance goes to zero.
+- **Selection**: each generation's full swarm is evaluated in parallel
+  (a simple work-stealing thread pool, sized to roughly a third of
+  `hardware_concurrency()` per GA so the three don't oversubscribe each
+  other), sorted by fitness, and the next generation's seed parent is
+  the **median value among the fittest 25%** (`ELITE_FRACTION`) — not
+  simply the single fittest individual — before refilling the rest of
+  that generation's population with fresh random bytes.
+- **Console output**: live progress per parameter (candidates
+  evaluated, %, elapsed, ETA), each generation's best candidate, and the
+  final `(Kp, Ki, Kd)` triple against the baseline's fitness.
+
+Bounds, population size, generation count, and `main.cpp`'s own
+`config.dt` are all plain constants — no config file — and have been
+edited by hand several times already while exploring this tool, so
+treat any specific number here as illustrative, not current fact; read
+the actual constants before relying on a runtime estimate. It does
+**not** auto-write its result into source: read off the final triple it
+prints and paste it into `NavigationStep`'s default gains
+(`include/gnc/navigation.hpp`) by hand if it's actually better.
+
+**This tool is a stopping point, not a finished optimizer** — see
+[Staging Notes](#staging-notes) #16 for what's built, what's known-rough
+about it, and what was deliberately left open.
 
 ## OpenRocket ingestion (`.ork` → simulation inputs)
 
@@ -293,7 +403,7 @@ target or tilt:
 
 | Flag | Overrides | Notes |
 |---|---|---|
-| `--target X Y Z` | `NAV_TARGET` | World-frame point `Navigation` steers TVC toward (see [Sensors & Navigation](#sensors--navigation)). Must be `z > 10m` — anything on/near the ground throws at construction (caught in `main()`, reported to stderr with exit code 1, not an uncaught-exception abort). |
+| `--target X Y Z` | `NAV_TARGET` | World-frame final target, broken into a waypoint sequence by `navigation::Navigation` and steered toward one waypoint at a time (see [Sensors & Navigation](#sensors--navigation)). Must be `z > 10m` — anything on/near the ground throws at construction (caught in `main()`, reported to stderr with exit code 1, not an uncaught-exception abort). |
 | `--init-tilt DEG` | Launch tilt (pitch) | Degrees from vertical. Every simulation embedded in the `.ork` uses a dead-vertical rod (0°), so this is what actually gives the pitch dynamics something to act on. |
 | `--init-yaw DEG` | Launch azimuth (yaw) | Degrees. Fixed for the whole flight (no yaw torque model) — see [Sign conventions](#sign-conventions) for how it combines with tilt. |
 | `--preview` | `config.dt`, `config.sim_duration` | Swaps to a faster/coarser fidelity (dt 0.001→0.004, duration cap 300s→60s) for quick exploration — this is what `scripts/trajectory.py`'s GUI uses under the hood. Not for trusted final numbers; omit for a real run. |
@@ -803,3 +913,95 @@ capability gap (see Staging Notes).
     this bug's effect stayed small -- not wrong, just working with data
     quietly corrupted by a latent bug that hadn't been triggered hard
     enough yet to be visible.
+13. **Split `Navigation` into a path planner (`navigation::Navigation`)
+    and a per-tick controller (`navigation::NavigationStep`, the old
+    class renamed), and made `NavigationStep`'s gains constructor
+    parameters instead of hardcoded constants.** Motivation: a target
+    close to the pad and one far downrange ask a single PID gain set for
+    very different maneuvers — retuning per-target doesn't scale. Fix:
+    `Navigation` now decomposes one final target into a straight-line
+    sequence of fixed-spacing (50m) waypoints and walks `NavigationStep`
+    through them one at a time, so the controller only ever steers
+    toward something a fixed, small distance away regardless of how far
+    the real target is — the "different regimes need different gains"
+    problem mostly disappears by construction rather than needing to be
+    solved by retuning. The ground-safety check (target on/near the
+    ground) moved from the per-tick class to the path planner, since it
+    now validates the real final target instead of a synthetic waypoint
+    that could legitimately be low early in a shallow flight — the
+    per-tick class's existing near-pad `ACTIVATION_ALTITUDE_M` gate
+    already covers the actual hazard that check existed for. Also added
+    a standalone genetic-algorithm search over `(Kp, Ki, Kd)` (since
+    superseded — see #15 below) — see
+    [Tuning NavigationStep's gains](#tuning-navigationsteps-gains-with-a-genetic-algorithm).
+    `main.cpp`'s `--target` flag and `scripts/trajectory.py`'s GUI needed
+    no changes — both already only ever expose the final target, which
+    is exactly what the new `Navigation` constructor takes.
+14. **`Navigation`'s waypoint-arrival check could get permanently stuck
+    on one waypoint.** Advancing to the next waypoint was a plain
+    Euclidean-distance check against `WAYPOINT_ARRIVAL_RADIUS_M`, and
+    nothing else could move `current_waypoint_idx_` forward — measured
+    directly on this project's own default target with the radius set
+    to 2m: real closest approach to waypoint 1 was 2.72m, a miss, and
+    with no fallback the controller kept steering at that one early
+    waypoint for the **entire rest of the flight** (apogee measured
+    dropping from ~2115m to ~561m in that state). Fixed by also
+    advancing once the vehicle's position has projected PAST the
+    waypoint along the path's own fixed straight-line direction
+    (`direction_`, computed once at construction), regardless of how far
+    off to the side it passed — `Navigation::computeTvcTarget()` in
+    `src/gnc/navigation.cpp`. A miss now degrades to "advanced a little
+    late" instead of "frozen on one waypoint forever," at any radius.
+15. **Replaced the #13 real-valued single-GA gain tuner with a three-
+    thread, binary-encoded genetic algorithm** (`src/tuning/`,
+    `include/tuning/pid_ga_tuner.hpp`, executable `pid_ga_tuner`) — see
+    [Tuning NavigationStep's gains](#tuning-navigationsteps-gains-with-a-genetic-algorithm)
+    for the full design (8-bit encoding, exhaustive per-generation
+    mating/mutation swarm, median-of-fittest-slice selection, three
+    gains searched concurrently and coordinated through a shared atomic
+    triple rather than a frozen baseline). Also switched what's being
+    optimized: evaluates `NavigationStep` directly against one close,
+    single-waypoint local target instead of `Navigation`'s full
+    multi-waypoint path across a spread of far/near targets — since the
+    #13 path-planning split means the per-tick controller only ever has
+    to solve that one local steering problem regardless of how far the
+    real mission target is, tuning against the local case directly is
+    both truer to what's actually being optimized and far cheaper per
+    fitness evaluation (one short hop instead of a full multi-km flight).
+16. **Stopping point for the GA gain tuner (#15) — there's a lot more
+    that could be done here, deliberately left open rather than kept
+    growing.** What's built and confirmed working: three concurrent
+    per-gain GAs, exhaustive per-generation mating/mutation, median-of-
+    fittest-slice selection, live progress/ETA, a final triple reported
+    against baseline. What's known-rough about the current design, not
+    bugs so much as simplifications that were fine for getting this far:
+    - **A single fixed local-hop target/duration** (`LOCAL_HOP_TARGET`,
+      `LOCAL_HOP_DURATION_S`) is the only fitness scenario — a gain
+      triple that wins here isn't verified to generalize across
+      different waypoint geometries (steeper/shallower angles, for
+      instance).
+    - **No averaging across noise** — `Gyro`/`Baro`/`Gps` are randomly
+      seeded per run (see #5's own noise model), so one fitness
+      evaluation is one noisy draw, not an expected value; a candidate
+      could look better or worse than it really is by luck.
+    - **The three GAs' shared-value coordination is asynchronous by
+      design** (see the header's own comment) — reads can be a
+      generation stale, and results aren't exactly reproducible run to
+      run because of thread-scheduling order, not just RNG.
+    - **`ParamSpec`'s baseline constants (`pid_ga_tuner.cpp`) are
+      independent of `NavigationStep`'s own constructor defaults**
+      (`navigation.hpp`) by the same "kept decoupled on purpose" pattern
+      used elsewhere in this project — but that also means they can
+      silently drift apart, as they already have:
+      `Navigation`'s own defaults were updated by hand to a GA-found
+      triple (`2.7176, 1.8196, 0.0745`) without updating
+      `NavigationStep`'s matching defaults or `ParamSpec`'s baseline to
+      match, so "baseline" in a tuner run no longer means "what
+      `Navigation` actually defaults to today." Worth reconciling before
+      trusting a tuner run's baseline-vs-final comparison at face value.
+    - Bounds, population size, generation count, and `main.cpp`'s
+      `config.dt` have all been hand-edited multiple times while
+      exploring this tool and are likely to keep moving — there's no
+      single "correct" setting recorded here on purpose; read the
+      current constants directly rather than trusting a specific number
+      written down in this file.

@@ -227,6 +227,22 @@ for the actual numbers. Navigation also deliberately stays off below a
 minimum altitude — right off the pad, a tiny angle error would otherwise
 translate into a full steering command at the worst possible moment.
 
+Navigation is now split into two classes: `Navigation` (a simple path
+planner — breaks one final target into a straight-line sequence of
+nearby waypoints) driving `NavigationStep` (the PID controller described
+above) one waypoint at a time. The reason: a target close to the pad and
+one far downrange ask the same fixed gain set for very different
+maneuvers, so instead of retuning per-target, the planner makes every
+step look like the same kind of local steering problem — see
+[`rocket_cpp/include/gnc/navigation.hpp`](./rocket_cpp/include/gnc/navigation.hpp).
+`rocket_cpp/src/tuning/` is a separate, offline tool (`pid_ga_tuner`) that
+searches for a better (Kp, Ki, Kd) triple than manual tuning found — three
+binary-encoded genetic algorithms, one per gain, run concurrently and
+coordinating through a shared live "current best" value rather than each
+working in isolation. See
+[`rocket_cpp/README.md`](./rocket_cpp/README.md#tuning-navigationsteps-gains-with-a-genetic-algorithm)
+for the full design.
+
 **ThrustVectorControl (TVC)** — the actuator model for the nozzle itself.
 Commanding a new angle doesn't make the physical nozzle teleport there; a
 real servo eases toward a new position over a fraction of a second. This
