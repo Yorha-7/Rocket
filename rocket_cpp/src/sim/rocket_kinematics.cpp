@@ -9,12 +9,14 @@ RocketKinematics::RocketKinematics(const RocketParams& params, const SimulationC
       mass_model_(mass_components, params_.body_diameter, params_.body_length),
       cp_location_cm_(aero_.computeCenterOfPressure()) {}
 
-// Body-to-world rotation matrix, built from the current roll/pitch/yaw
-// Euler angles: the standard Z-Y-X (yaw, then pitch, then roll) aerospace
-// DCM, R = Rz(yaw)*Ry(pitch)*Rx(roll). Used to turn forces that act along
-// the rocket's own axes (thrust) into forces in the world frame we
-// integrate position/velocity in -- e.g. a pitched-over rocket's thrust
-// should pick up a horizontal component, which this matrix now does.
+// ##### rocketToNedFrame() #####
+// Goal: given the vehicle's current roll/pitch/yaw, build the matrix
+// that converts "a direction described in the rocket's own axes" into
+// "that same direction described in world axes" (body -> world). Used
+// any time a force acts along the rocket's own body (like thrust) and
+// needs to be expressed in world coordinates to be added to gravity/drag
+// and integrated into position. Standard aerospace Z-Y-X convention:
+// yaw first, then pitch, then roll.
 Eigen::Matrix3d RocketKinematics::rocketToNedFrame(const RocketState& state) {
     double roll  = state.orientation(0);
     double pitch = state.orientation(1);
@@ -31,12 +33,17 @@ Eigen::Matrix3d RocketKinematics::rocketToNedFrame(const RocketState& state) {
     return R;
 }
 
-// What the aerodynamics model needs to know about "right now": how fast,
-// how high, at what angle of attack. Shared by translation (drag) and
-// pitch dynamics (normal force), so both use the same flight condition.
-// reynolds/reynolds_length are left at 0 here -- computeFrictionDrag
-// works out its own Reynolds number internally (it needs the choice of
-// reference length, nose+body, which isn't this struct's job to know).
+// ##### buildFlightConditions() #####
+// Goal: package up "what the air looks like to the vehicle right now" --
+// how fast, how high, and how far off-axis the airflow is hitting it
+// (angle of attack in the pitch plane, sideslip in the yaw plane) -- into
+// one bundle the aerodynamics model and both torque models can share.
+//
+// Alpha/beta are found by rotating the WORLD-frame velocity into BODY
+// frame (via rocketToNedFrame's transpose, since going world->body is
+// the reverse of body->world) rather than assuming the velocity stays in
+// some fixed plane -- needed now that TVC can push the vehicle off-axis
+// in either plane independently.
 FlightConditions RocketKinematics::buildFlightConditions(const RocketState& state) const {
     double altitude = std::max(0.0, state.position(2));
     double velocity = state.velocity.norm();
@@ -47,24 +54,13 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     fc.mach = velocity / aero_.getSpeedOfSound(altitude);
     fc.dynamic_pressure = 0.5 * aero_.getDensity(altitude) * velocity * velocity;
 
-    // Real angle of attack (alpha) and sideslip (beta): the angle between
-    // the body's own nose axis and its actual velocity, decomposed into
-    // the pitch plane (alpha) and yaw plane (beta). Computed by rotating
-    // velocity into BODY frame rather than assuming it stays in some
-    // fixed plane -- that assumption held back when yaw was always
-    // static and nothing could push velocity sideways out of it, but TVC
-    // can now steer independently in both planes, so alpha/beta need to
-    // be exact regardless of where the velocity vector actually points.
-    // At v=0 (pad, or a momentary stall) both come out 0, same as before.
-    //
-    // Negated (atan2(-x,z), not atan2(x,z)): alpha needs to be POSITIVE
-    // when the nose leads the velocity vector (so the restoring torque
-    // -Cn_alpha*alpha*d comes out negative and pulls the nose back) --
-    // verified against the old, already-correct single-plane formula on
-    // a concrete case (nose tipped +10deg, purely vertical velocity
-    // should give alpha=+10deg). The un-negated form gives exactly the
-    // opposite sign, which is what made pitch run away to the clamp
-    // instead of settling the first time this was written.
+    // Goal: alpha must read POSITIVE when the nose is leading the
+    // velocity vector, so the restoring torque (-Cn_alpha*alpha*d) comes
+    // out negative and pulls the nose back toward the airflow -- verified
+    // against a concrete case (nose tipped +10deg, purely vertical
+    // velocity -> alpha should read +10deg). The un-negated form gives
+    // the opposite sign, which is what made pitch run away instead of
+    // settling the first time this was written -- see README history.
     Eigen::Vector3d v_body = rocketToNedFrame(state).transpose() * state.velocity;
     if (velocity > 1e-6) {
         fc.alpha = atan2(-v_body.x(), v_body.z());  // body X-Z plane, vs. nose axis (Z)
@@ -80,20 +76,19 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     return fc;
 }
 
-// Everything that pushes or pulls on the rocket: thrust along the
-// TVC-deflected nozzle direction (state's own gimbal_pitch_rad/
-// gimbal_yaw_rad -- see ThrustVectorControl; (0,0,thrust) when both are
-// 0, i.e. no deflection), drag opposing its velocity (drag coefficient
-// computed by our own AerodynamicsModel, not read from anywhere), and
-// gravity -- summed in the world frame. computeAcceleration() just
-// divides this by mass; computeNetForce() exposes it directly for
-// logging/plotting. Deliberately reads the gimbal angles from `state`,
-// not from the live tvc_ member -- see tvc_'s declaration comment.
+// ##### computeNetForce() #####
+// Goal: add up every force acting on the rocket -- thrust, drag,
+// gravity -- all expressed in WORLD frame, since that's the frame
+// position/velocity are integrated in.
 Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, double thrust) const {
     const double g0 = 9.80665;
     const double v = state.velocity.norm();
     const double v2 = v * v;
 
+    // Goal: get the thrust push in BODY frame first (which way the
+    // nozzle is actually deflected, read from state -- not the live TVC
+    // object, see tvc_'s declaration comment -- so replaying an old step
+    // reads that step's real history).
     Eigen::Vector3d thrust_body = -thrust * ThrustVectorControl::nozzleDirectionFromAngles(
         state.gimbal_pitch_rad, state.gimbal_yaw_rad);
 
@@ -104,10 +99,15 @@ Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, doub
     double drag_coeff = aero_.computeCoefficients(fc).Cd;
     double drag_area = params_.reference_area;
 
-    // Already a world-frame vector -- built directly from state.velocity,
-    // which has always been world-frame throughout this codebase (see
-    // RocketState's own doc comment). No rotation needed to "convert" it;
-    // it was never in body frame to begin with.
+    // Goal: drag straight-up opposes whatever direction the vehicle is
+    // actually moving through the air -- built directly from
+    // state.velocity, which is ALREADY a world-frame quantity (see
+    // RocketState's own doc comment), so this is already the answer, no
+    // conversion needed. (A stale version of this file used to rotate
+    // this through rocketToNedFrame() a second time -- meaningless, since
+    // it was never in body frame to begin with, and the double rotation
+    // could flip drag into effectively pushing the rocket during a fast
+    // attitude change. See README Staging Notes for the fix writeup.)
     Eigen::Vector3d drag_ned;
     if (v > 1e-6) {
         drag_ned = -state.velocity.normalized() * drag_coeff * drag_area * 0.5 * rho * v2;
@@ -115,9 +115,9 @@ Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, doub
         drag_ned = Eigen::Vector3d::Zero();
     }
 
-    // thrust_body, unlike drag, genuinely IS in body frame (built from
-    // gimbal angles measured relative to the vehicle's own axes) -- this
-    // rotation is the only one actually needed here.
+    // Goal: NOW convert the body-frame thrust push into world frame --
+    // this rotation genuinely is needed, since thrust_body really is
+    // expressed along the vehicle's own axes.
     Eigen::Matrix3d R = rocketToNedFrame(state);
     Eigen::Vector3d thrust_ned = R * thrust_body;
 
@@ -130,13 +130,16 @@ Eigen::Vector3d RocketKinematics::computeAcceleration(const RocketState& state, 
     return computeNetForce(state, thrust) / state.mass;
 }
 
+// ##### step() #####
+// Goal: advance one dt -- integrate translation (Newton's second law:
+// force -> acceleration -> velocity -> position), hand off to the pitch
+// and yaw torque models for rotation, and advance the TVC actuator so
+// next call's force reads its updated (lagged, not instant) position.
 RocketState RocketKinematics::step(const RocketState& state, double thrust,
                                    const Eigen::Vector3d& tvc_target_dir) {
-    // The live actuator always starts this call sitting at `state`'s own
-    // gimbal angles (see tvc_'s declaration comment) -- command the new
-    // target, then use THIS step's force with the actuator still at its
-    // pre-command position (it hasn't physically moved yet), matching a
-    // real servo's lag.
+    // Goal: tell the actuator where it's being commanded to go THIS
+    // step, but use the force from its position BEFORE that command --
+    // it hasn't physically moved yet, matching a real servo's lag.
     tvc_.commandForceDirection(tvc_target_dir);
     elapsed_time_s_ += config_.dt;
 
@@ -150,13 +153,15 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
     updatePitchDynamics(next, state);
     updateYawDynamics(next, state);
 
-    // Roll still has no torque model (see README "Staging Notes" / 6DOF
-    // roadmap) -- just keep the angle bounded.
+    // Goal: roll has no torque model yet (see README Staging Notes) --
+    // just keep its angle wrapped into a sane range, don't let it drift
+    // unbounded.
     next.orientation(0) = fmod(state.orientation(0), 2*M_PI);
 
-    // Now advance the actuator toward its (possibly just-changed) target,
-    // and bake the result into next -- this is what computeNetForce will
-    // read on the FOLLOWING call.
+    // Goal: now that this step's force has already been computed against
+    // the PRE-command actuator position, actually move the actuator
+    // toward its (possibly just-changed) target, and save where it ended
+    // up -- that's what computeNetForce reads on the FOLLOWING call.
     tvc_.step(config_.dt);
     next.gimbal_pitch_rad = tvc_.currentGimbalPitchRad();
     next.gimbal_yaw_rad = tvc_.currentGimbalYawRad();
@@ -164,20 +169,25 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
     return next;
 }
 
+// ##### simulate() #####
+// Goal: run step() repeatedly to play out a full flight, from launch to
+// ground contact, feeding it thrust/mass from FlightData and (optionally)
+// a live guidance decision from Navigation each step.
 std::vector<RocketState> RocketKinematics::simulate(double time, const FlightData& flight_data,
                                                     const std::vector<Eigen::Vector3d>& tvc_targets,
                                                     Navigation* navigation) {
-    // n_steps is sized from the requested flight time, NOT clamped to
-    // flight_data's own length -- that array only covers however long
-    // OpenRocket's own (unguided) simulation happened to run, which can
-    // be well short of how long THIS flight actually takes once TVC
-    // pushes it onto a different (e.g. much higher-apogee) trajectory.
-    // Ground contact is still what actually ends the loop early (below);
-    // this just stops it from running out of thrust/mass data first and
+    // Goal: size the loop from the requested flight time alone -- NOT
+    // clamped to flight_data's own length. That array only covers
+    // however long OpenRocket's own (unguided) simulation happened to
+    // run, which can be well short of how long THIS flight actually
+    // takes once TVC pushes it onto a different trajectory. Ground
+    // contact (below) is still what actually ends the loop early; this
+    // just stops it from running out of thrust/mass data first and
     // silently stopping mid-air, still hundreds of meters up.
     int n_steps = static_cast<int>(time / config_.dt);
     std::vector<RocketState> states(n_steps + 1);
 
+    // Goal: set up the vehicle exactly as it sits on the pad at t=0.
     RocketState initial;
     initial.position = Eigen::Vector3d(0, 0, config_.launch_height);
     initial.velocity = Eigen::Vector3d::Zero();
@@ -195,22 +205,22 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
     sensors::Gyro nav_gyro;
 
     for (int i = 0; i < n_steps; ++i) {
-        // Past the end of the recorded flight data: the motor's done
-        // burning (thrust=0) and no more propellant is left to shed
-        // (mass stays at its dry value) -- same defensive indexing
-        // main.cpp's own force-recomputation loop already uses.
+        // Goal: past the end of the recorded flight data, the motor is
+        // done burning (thrust=0) and there's no more propellant left to
+        // shed (mass holds at its dry value) -- real motors don't
+        // restart or un-burn fuel. Same defensive indexing main.cpp's
+        // own force-recomputation loop already uses.
         double thrust = (i < (int)flight_data.thrust.size()) ? flight_data.thrust[i] : 0.0;
         double mass_kg = (i < (int)flight_data.mass.size())
             ? gramsToKg(flight_data.mass[i])
             : gramsToKg(flight_data.dry_mass);
 
+        // Goal: work out which way to command TVC this step -- either a
+        // fixed pre-scripted sequence, or (if guidance is attached) a
+        // live decision from fresh simulated sensor readings of the
+        // state THIS step is starting from (never a future/lookahead state).
         Eigen::Vector3d tvc_target;
         if (navigation != nullptr) {
-            // Guidance reads the state THIS step starts from -- same
-            // "read the truth, no lookahead" rule everything else here
-            // follows. angular_vel(0)==0 for i==0, so using states[i]
-            // as its own "previous" state there just gives Gyro a
-            // harmless zero angular-acceleration reading at t=0.
             nav_gps.update(states[i], config_.dt);
             const RocketState& prev = (i > 0) ? states[i - 1] : states[i];
             nav_gyro.update(states[i], prev, config_.dt);
@@ -223,6 +233,11 @@ std::vector<RocketState> RocketKinematics::simulate(double time, const FlightDat
         temp.mass = mass_kg;
         states[i + 1] = step(temp, thrust, tvc_target);
 
+        // Goal: stop the flight the instant it crosses the ground,
+        // landing exactly ON z=0 instead of overshooting into negative
+        // altitude -- find how far between this step and the last one
+        // the crossing actually happened (frac), and linearly interpolate
+        // every state variable back to that exact instant.
         if (states[i + 1].position(2) < 0.0) {
             double z_above = states[i].position(2);
             double z_below = states[i + 1].position(2);

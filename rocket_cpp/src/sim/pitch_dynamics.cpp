@@ -3,46 +3,35 @@
 #include <cmath>
 #include <algorithm>
 
-// ============================================================
-// Pitch dynamics: how the rocket tips forward/backward.
-//
-// Two things fight for control of the pitch angle each step:
-//   1. Aerodynamic force, acting at the CP, which pushes the nose
-//      back toward the direction of travel whenever the body axis
-//      and velocity vector disagree (real angle of attack -- see
-//      buildFlightConditions -- not just absolute tilt from vertical).
-//   2. Damping, which just resists whatever rotation is happening,
-//      like air resistance on a spinning weathervane.
-// Their combined torque, divided by how hard the rocket resists
-// rotating (its moment of inertia), gives the pitch acceleration.
-//
-// Gravity is NOT a third contributor: a uniform gravitational field
-// exerts zero net torque about a rigid body's own center of gravity,
-// by definition of the CG. (computeGravityTorque is kept as a
-// deliberate always-zero stub -- see below -- rather than removed, so
-// the CSV/plots keep the same 3-column torque breakdown and visibly
-// show that contribution as zero instead of silently disappearing.)
-//
-// CP/CG/inertia (MassProperties) and the normal-force slope Cn_alpha are
-// both computed from the vehicle's own geometry (AerodynamicsModel,
-// VehicleMassModel) -- nothing here is read from a pre-solved simulation.
-// ============================================================
+// ##### Pitch dynamics, the big picture #####
+// Goal: work out how the rocket tips forward/backward each step. Two
+// things fight over the pitch angle: aerodynamic force at the CP trying
+// to swing the nose back into the airflow (weathercocking), and damping
+// resisting whatever rotation is already happening. Their combined
+// torque, divided by how hard the rocket resists spinning (I_yy), gives
+// pitch acceleration -- straight Newton's second law for rotation.
+// Gravity is NOT a third contributor: a uniform field can't exert any
+// net torque about a rigid body's own center of gravity, by definition
+// of the CG.
 
-// Always zero: gravity acts through the CG by definition, so it can't
-// exert a torque about the CG no matter where the CP sits. An earlier
-// version of this modeled gravity as a pendulum restoring torque
-// (mass on a rod pivoting around a fixed point) -- physically wrong for
-// a body in free flight, and it dominated the (also wrong) pitch
-// behavior at large launch angles.
+// ##### computeGravityTorque() #####
+// Goal: always return zero, deliberately -- see the note above. Kept as
+// a real (empty) function rather than deleted so the CSV/plots keep the
+// same 3-column torque breakdown and visibly show "zero," instead of
+// that column silently disappearing.
 double RocketKinematics::computeGravityTorque(const RocketState& state,
                                               const MassProperties& mp) const {
     return 0.0;
 }
 
-// Air pushing on the CP, offset from the CG, also creates a
-// restoring torque — stronger at higher speed and lower altitude
-// (denser air). Angle of attack is approximated by the pitch angle
-// itself, which only holds for near-vertical flight with no wind.
+// ##### computeAerodynamicMoment() #####
+// Goal: work out the restoring torque from air pushing on the CP,
+// offset from the CG -- stronger at higher speed and denser (lower)
+// air, and proportional to how far the nose is actually off the airflow
+// (real angle of attack, not just tilt from vertical). Capped at ~28.6
+// degrees of angle of attack (alpha_limited) since the underlying
+// Cn_alpha model is a straight-line approximation that stops being
+// trustworthy at extreme angles (real air starts separating/stalling).
 double RocketKinematics::computeAerodynamicMoment(const RocketState& state,
                                                   const MassProperties& mp) const {
     double v = state.velocity.norm();
@@ -62,9 +51,13 @@ double RocketKinematics::computeAerodynamicMoment(const RocketState& state,
     return -0.5 * rho * v * v * Cn_alpha * alpha_limited * A * d;
 }
 
-// Resists rotation, proportional to how fast the rocket is already
-// rotating — like a weathervane settling down instead of oscillating
-// forever. 0.6 is OpenRocket's own empirical damping factor.
+// ##### computeDampingTorque() #####
+// Goal: resist whatever rotation is currently happening, proportional to
+// how fast it's spinning -- like a weathervane settling down instead of
+// swinging forever. 0.6 is OpenRocket's own empirical damping factor for
+// this shape of formula. (This coefficient has been measured elsewhere
+// this session as noticeably weak -- see README Staging Notes -- worth
+// knowing if a trajectory oscillates for longer than expected.)
 double RocketKinematics::computeDampingTorque(const RocketState& state,
                                               const MassProperties& mp) const {
     double altitude = std::max(0.0, state.position(2));
@@ -78,6 +71,8 @@ double RocketKinematics::computeDampingTorque(const RocketState& state,
     return -c_damp * state.angular_vel(1);
 }
 
+// Goal: add the three torque sources into the one number the integrator
+// actually uses.
 double RocketKinematics::computeTotalPitchTorque(const RocketState& state,
                                                  const MassProperties& mp) const {
     return computeGravityTorque(state, mp)
@@ -85,9 +80,11 @@ double RocketKinematics::computeTotalPitchTorque(const RocketState& state,
          + computeDampingTorque(state, mp);
 }
 
-// Newton's second law for rotation: angular acceleration = torque / inertia.
-// Clamped so a bad transient (e.g. right at motor ignition) can't blow up
-// the integration.
+// ##### computePitchAcceleration() #####
+// Goal: Newton's second law for rotation -- angular acceleration =
+// torque / inertia. Clamped so a bad transient (e.g. right at motor
+// ignition, before the vehicle has picked up real airspeed) can't blow
+// the integration up to nonsense.
 double RocketKinematics::computePitchAcceleration(double total_torque,
                                                   const MassProperties& mp) const {
     double alpha = total_torque / mp.I_yy;
@@ -95,36 +92,20 @@ double RocketKinematics::computePitchAcceleration(double total_torque,
     return std::max(-MAX_ALPHA, std::min(MAX_ALPHA, alpha));
 }
 
-// Integrate: torque -> angular acceleration -> angular velocity -> pitch
-// angle. Mass properties are recomputed from the vehicle's current mass
-// (propellant burns down) and our cached Barrowman CP each step.
+// ##### updatePitchDynamics() #####
+// Goal: integrate torque -> angular acceleration -> angular rate ->
+// pitch angle, one dt at a time. Mass properties are recomputed from the
+// vehicle's current mass (propellant burns down) each step.
 //
-// Pitch used to hard-clamp orientation(1) to +-85 degrees for the WHOLE
-// flight -- added as a numerical safety net against a bad transient
-// right at ignition, per the original comment, but never actually
-// scoped to just that window. In practice that meant it did something
-// its own comment never intended: once a real (not transient-glitch)
-// flight pushed pitch up against that wall -- e.g. sustained TVC
-// saturation building a mostly-horizontal velocity, see README Staging
-// Notes -- the clamp TRAPPED the vehicle there instead of letting
-// computeAerodynamicMoment's restoring torque keep tracking the actual
-// velocity vector past 90 degrees, the way it's always free to for yaw
-// (yaw_dynamics.cpp has never clamped its angle, only wrapped it).
-//
-// Tried removing the clamp entirely to match yaw -- confirmed the trap
-// really was the problem, but also uncovered a second, real issue:
-// fully unclamped, a large enough excursion can spin up faster than the
-// (already-known-weak, see Staging Notes) damping torque and
-// computeAerodynamicMoment's own stall saturation (alpha capped at
-// +-0.5 rad) can arrest, so the vehicle can end up genuinely tumbling
-// (measured: >190 degrees, >450 deg/s) instead of settling. Fixing that
-// properly means retuning the aerodynamic model, out of scope here --
-// so the clamp is back, but scoped to ONLY the actual ignition window
-// its comment always claimed (elapsed_time_s_ tracks that, see
-// rocket_kinematics.hpp), not the entire flight. Pitch is free to wrap
-// like yaw once clear of it; a trajectory that tumbles after that is a
-// real (if extreme) finding about this vehicle's damping, not something
-// papered over by an angle wall.
+// Pitch angle wraps (fmod) rather than clamps, same as yaw -- neither
+// axis is physically bounded to a narrow range; a vehicle CAN legitimately
+// end up nose-down or flying past 90 degrees of tilt. An angle clamp here
+// used to run for the WHOLE flight (not just ignition) and ended up
+// trapping the vehicle at its wall instead of letting the real restoring
+// torque above keep tracking wherever the velocity vector actually went
+// -- see README Staging Notes for the full writeup and the follow-on
+// finding it led to (a real, separate bug in how drag was computed,
+// also documented there).
 void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState& state) const {
     MassProperties mp = mass_model_.computeAt(state.mass);
     mp.cp_location_cm = cp_location_cm_;
@@ -139,11 +120,10 @@ void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState&
 
     next.orientation(1) = fmod(state.orientation(1) + next.angular_vel(1) * config_.dt, 2 * M_PI);
 
-    // Ignition-transient guard, and ONLY that -- see this function's doc
-    // comment. 0.1s is generous relative to how fast this vehicle's
-    // motor actually ramps up (0 to ~70N in ~0.05s, per the .ork's own
-    // thrust curve), so it covers the real transient without lingering
-    // into the rest of the flight the way the old whole-flight clamp did.
+    // Goal: ONLY guard the true ignition transient (first 0.1s, generous
+    // against the motor's real ~0.05s ramp-up per the .ork's own thrust
+    // curve) -- not the whole flight. Past that window, pitch is free to
+    // wrap like yaw always has.
     const double IGNITION_TRANSIENT_S = 0.1;
     if (elapsed_time_s_ <= IGNITION_TRANSIENT_S) {
         const double MAX_PITCH = 1.5;  // ~85 degrees
@@ -151,9 +131,10 @@ void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState&
     }
 }
 
-// Same mass properties/torque math as updatePitchDynamics, but returns
-// the breakdown instead of integrating it -- for logging/plotting which
-// of the three torques is actually driving the pitch at each instant.
+// ##### computePitchTorques() #####
+// Goal: same math as updatePitchDynamics, but return the three torques
+// broken out instead of integrating them -- for logging/plotting which
+// one is actually driving pitch at a given instant.
 PitchTorques RocketKinematics::computePitchTorques(const RocketState& state) const {
     MassProperties mp = mass_model_.computeAt(state.mass);
     mp.cp_location_cm = cp_location_cm_;

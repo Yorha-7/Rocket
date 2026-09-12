@@ -5,21 +5,20 @@
 #include <string>
 #include <vector>
 
-// Everything main.cpp needs to run a simulation, read straight out of an
-// OpenRocket .ork design file.
-//
-// struct (all members public by default -- just a bundle of data, no
-// hidden/private fields or invariants to protect, unlike a class).
+// ##### OrkRocket #####
+// Goal: bundle everything main.cpp needs to run a simulation, all read
+// straight out of one OpenRocket .ork design file.
 struct OrkRocket {
     RocketParams params;                     // fixed geometry
     SimulationConfig launch_conditions;      // pad height / initial tilt this motor was launched at
     FlightData flight_data;                  // thrust/mass over time (motor performance data)
     std::vector<MassComponent> mass_components;  // structural parts, for VehicleMassModel
-    // std::vector = a resizable list/array; here, a growable list of MassComponent structs
 };
 
-// Loads geometry, flight-data history, and structural mass components from
-// an .ork file in one call. If motor_configid is empty, uses whichever
-// motor configuration the design marks as default.
+// ##### loadOrkRocket() #####
+// Goal: the one call site -- load geometry, flight-data history, and
+// structural mass components from an .ork file together. If
+// motor_configid is empty, uses whichever motor configuration the
+// design itself marks as default.
 OrkRocket loadOrkRocket(const std::string& ork_path, double dt,
                         const std::string& motor_configid = "");

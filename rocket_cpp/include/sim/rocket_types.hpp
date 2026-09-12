@@ -4,15 +4,16 @@
 #include <vector>
 #include <string>
 
-// Eigen::Vector3d = a fixed-size 3-number vector (x,y,z) from the Eigen
-// math library, used below for physical 3D quantities.
-//
-// All the structs in this file use "struct" rather than "class" -- fields
-// are public by default, since these are just data bundles passed around
-// between classes, with no internal invariant to protect via private members.
+// ##### Why "struct" here #####
+// Goal: hold data, nothing else. Every type below is just a labeled
+// bundle of numbers passed between classes -- no behavior to protect,
+// so "struct" (public fields) instead of "class" (private + getters).
 
-// Everything the vehicle is doing right now: where it is, how fast,
-// which way it's pointed, how fast it's rotating, and how heavy it is.
+// ##### RocketState #####
+// Goal: capture everything the vehicle is doing at one instant -- where
+// it is, how fast, which way it's pointed, how fast it's spinning, and
+// how heavy it is right now. This is the one object that gets passed
+// state -> next state through every physics step.
 struct RocketState {
     Eigen::Vector3d position;     // x, y, z — z is altitude above the pad, positive up (m)
     Eigen::Vector3d velocity;     // vx, vy, vz (m/s)
@@ -20,18 +21,20 @@ struct RocketState {
     Eigen::Vector3d angular_vel;  // p, q, r (rad/s)
     double mass;                  // current vehicle mass (kg)
 
-    // Where the TVC nozzle actually is right now (not where it's commanded
-    // to be -- the actuator lags, see ThrustVectorControl). Stored on the
-    // state itself, not just inside RocketKinematics, so computeNetForce()
-    // stays a pure function of (state, thrust) -- recomputing it later for
-    // logging/plotting reads the SAME historical nozzle angle the
-    // integrator actually used at that instant, not whatever the live
-    // actuator has moved on to since.
+    // Goal: remember where the TVC nozzle physically is right now (not
+    // where it was just told to go -- the actuator eases there, it
+    // doesn't teleport). Stored here, not just inside the TVC class
+    // itself, so replaying/logging a past step reads the SAME nozzle
+    // angle that actually flew, not wherever the live actuator has
+    // since moved on to.
     double gimbal_pitch_rad = 0.0;  // deflects nozzle toward +X, body X-Z plane
     double gimbal_yaw_rad = 0.0;    // deflects nozzle toward +Y, body Y-Z plane
 };
 
-// Air-relative conditions the aerodynamics model needs at one instant.
+// ##### FlightConditions #####
+// Goal: snapshot everything the aerodynamics model needs to know about
+// "right now" -- speed, altitude, angle relative to the air -- so drag
+// and turning forces can be looked up from it in one place.
 struct FlightConditions {
     double mach;              // Mach number
     double alpha;             // angle of attack (rad)
@@ -47,8 +50,9 @@ struct FlightConditions {
     double roll_angle;        // rad
 };
 
-// One set of aerodynamic force/moment coefficients, as produced by
-// AerodynamicsModel::computeCoefficients() for a given FlightConditions.
+// ##### AerodynamicCoefficients #####
+// Goal: hold one complete set of drag/turning-force numbers for a given
+// FlightConditions -- the output of AerodynamicsModel::computeCoefficients().
 struct AerodynamicCoefficients {
     double Cd;       // total drag coefficient
     double Cn;       // normal force coefficient
@@ -63,9 +67,11 @@ struct AerodynamicCoefficients {
     double Cm_alpha;  // pitching moment derivative (per rad)
 };
 
-// What the rocket physically *is* — its fixed shape and motor spec.
-// Nothing here changes during flight; things that do (mass, CG, CP,
-// inertia, thrust) live in FlightData/MassProperties instead.
+// ##### RocketParams #####
+// Goal: describe the rocket's fixed SHAPE and motor spec -- everything
+// that never changes mid-flight. Anything that DOES change (mass, CG,
+// CP, inertia, thrust) lives in FlightData/MassProperties instead, not
+// here.
 struct RocketParams {
     double thrust_duration;  // motor burn time (s)
     double max_thrust;       // peak thrust, informational only — actual thrust comes from FlightData (N)
@@ -94,13 +100,17 @@ struct RocketParams {
     // Surface finish
     double surface_roughness;  // RMS roughness (m)
 
-    // Derived from body_diameter: pi * (body_diameter/2)^2. Used to
-    // normalize every drag/lift/moment coefficient in the sim.
+    // Goal: precompute the cross-section area once (pi * radius^2) so
+    // every drag/lift/moment coefficient in the sim normalizes against
+    // the same number instead of recomputing it everywhere.
     double reference_area;     // m^2
 };
 
-// How we choose to run our own integrator — separate from anything the
-// rocket's design implies.
+// ##### SimulationConfig #####
+// Goal: hold OUR OWN choices about how to run the integrator -- separate
+// from anything the rocket's own design says. Two rockets with identical
+// RocketParams could still be simulated with different launch tilts or
+// time steps via this struct.
 struct SimulationConfig {
     double launch_height;  // launch site height above ground (m)
     double init_tilt;      // initial pitch angle from vertical (degrees)
@@ -110,11 +120,11 @@ struct SimulationConfig {
     double dt;              // time step (s)
 };
 
-// A flight's time history, resampled to a uniform dt. Thrust and mass are
-// motor performance data -- there's no local motor database to derive them
-// from independently, so they're the one thing still read from the .ork.
-// Everything else the sim needs (Cd, CP, CG, inertia) is computed by
-// AerodynamicsModel/VehicleMassModel from the vehicle's own geometry.
+// ##### FlightData #####
+// Goal: carry the ONE thing this sim still trusts from OpenRocket's own
+// data -- the motor's thrust and mass curve over time, resampled to a
+// uniform dt. Everything else the sim needs (Cd, CP, CG, inertia) is
+// computed independently from the vehicle's own geometry, not read here.
 struct FlightData {
     std::vector<double> time;    // uniform timestep (s)
     std::vector<double> thrust;  // N
@@ -122,8 +132,10 @@ struct FlightData {
     double dry_mass;             // mass at burnout (g)
 };
 
-// A snapshot of FlightData at one instant — everything the pitch-dynamics
-// equations need to know about the vehicle's mass distribution right now.
+// ##### MassProperties #####
+// Goal: snapshot FlightData at one instant into exactly what the pitch
+// and yaw torque equations need to know about the vehicle's current mass
+// distribution (where its balance point is, how hard it resists spinning).
 struct MassProperties {
     double cp_location_cm;
     double cg_location_cm;
@@ -132,8 +144,11 @@ struct MassProperties {
     double I_zz;  // yaw axis (kg*m^2) — assumed equal to I_yy (axisymmetric body)
 };
 
-// The three torques that add up to the total pitch torque each step —
-// broken out for logging/plotting, not used internally by the integrator.
+// ##### PitchTorques / YawTorques #####
+// Goal: break the total pitch/yaw torque down into its three named
+// sources, purely for logging and plotting -- the integrator itself just
+// uses the sum, but seeing gravity/aero/damping separately is what makes
+// the CSV plots useful for debugging which one is actually driving a step.
 struct PitchTorques {
     double gravity;      // N*m
     double aerodynamic;  // N*m
@@ -148,8 +163,8 @@ struct YawTorques {
     double damping;      // N*m
 };
 
-// Convert grams to kg.
-// inline = tells the compiler it's safe for this tiny function's body to be
-// copied into every place that calls it (needed since it's defined here in
-// a header, which can get #included into multiple .cpp files at once).
+// ##### gramsToKg #####
+// Goal: one place to convert the .ork's own mass units (grams) into the
+// kg this whole sim works in, so that conversion isn't repeated/risked
+// at every call site.
 inline double gramsToKg(double grams) { return grams / 1000.0; }
