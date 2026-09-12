@@ -141,9 +141,10 @@ int runSimulation(const CliArgs& args) {
     // Goal: fix the guidance target for this run -- settable via
     // --target, no mission-planning input beyond a single fixed point yet.
     const Eigen::Vector3d NAV_TARGET(args.target_x, args.target_y, args.target_z);
-    Navigation navigation(NAV_TARGET, config.dt);
+    navigation::Navigation navigation(NAV_TARGET, config.dt);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
-              << ", " << NAV_TARGET.z() << ") m -- guidance law: point the nose at it, TVC does the rest\n";
+              << ", " << NAV_TARGET.z() << ") m across " << navigation.waypointCount()
+              << " waypoint(s) -- guidance law: point the nose at each in turn, TVC does the rest\n";
 
     auto states = sim.simulate(config.sim_duration, flight_data, {}, &navigation);
 
@@ -265,6 +266,18 @@ int runSimulation(const CliArgs& args) {
 
     // ##### Console summary #####
     std::cout << "\nApogee: " << h_apogee << " m at t=" << t_apogee << " s\n";
+    // Goal: surface whether the path planner actually walked all the way
+    // to the final waypoint, or got stuck earlier -- WAYPOINT_ARRIVAL_
+    // RADIUS_M is a plain Euclidean-distance check (see navigation.cpp),
+    // so a trajectory that never comes that close to some intermediate
+    // waypoint (overshoot, a wide miss, terrain/dynamics not permitting
+    // it) leaves current_waypoint_idx_ stuck there for the rest of the
+    // flight -- worth knowing before reading too much into a bad result.
+    std::cout << "Path planner: reached waypoint " << (navigation.currentWaypointIndex() + 1)
+              << " of " << navigation.waypointCount()
+              << (navigation.currentWaypointIndex() + 1 == navigation.waypointCount()
+                      ? " (reached the final target waypoint)\n"
+                      : " -- STUCK short of the final target, never entered the arrival radius of a later waypoint\n");
     std::cout << "Simulation complete.\n";
     std::cout << "Results: rocket_trajectory.csv"
               << (args.no_plot ? "" : ", rocket_analysis.png, rocket_trajectory.png") << "\n";

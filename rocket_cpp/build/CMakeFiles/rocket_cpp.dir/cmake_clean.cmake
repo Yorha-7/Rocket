@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/rocket_cpp.dir/src/cli_args.cpp.o.d"
   "CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o"
   "CMakeFiles/rocket_cpp.dir/src/gnc/navigation.cpp.o.d"
+  "CMakeFiles/rocket_cpp.dir/src/gnc/navigation_step.cpp.o"
+  "CMakeFiles/rocket_cpp.dir/src/gnc/navigation_step.cpp.o.d"
   "CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o"
   "CMakeFiles/rocket_cpp.dir/src/gnc/sensors.cpp.o.d"
   "CMakeFiles/rocket_cpp.dir/src/gnc/thrust_vector_control.cpp.o"

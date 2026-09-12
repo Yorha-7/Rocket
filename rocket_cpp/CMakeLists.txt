@@ -12,12 +12,12 @@ find_package(Eigen3 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
 pkg_check_modules(TINYXML2 REQUIRED IMPORTED_TARGET tinyxml2)
+find_package(Threads REQUIRED)  # pid_ga_tuner runs its three GAs as real std::thread's
 
-add_executable(rocket_cpp
-    src/main.cpp
-    src/cli_args.cpp
-    include/cli_args.hpp
-
+# Goal: everything the simulation/flight-computer stack needs, shared by
+# every executable below (rocket_cpp and pid_ga_tuner) -- listed once so
+# adding a second entry point doesn't mean duplicating this whole list.
+set(ROCKET_CORE_SOURCES
     # sim -- the physics engine (ground-truth simulation)
     src/sim/rocket_kinematics.cpp
     src/sim/pitch_dynamics.cpp
@@ -43,19 +43,48 @@ add_executable(rocket_cpp
     include/ork/ork_loader.hpp
 
     # gnc -- Guidance/Navigation/Control: the "flight computer" stack
-    # (sensors feed Navigation, which decides direction; TVC executes it)
+    # (sensors feed Navigation, which plans a path and steers it one
+    # waypoint at a time; TVC executes it)
     src/gnc/thrust_vector_control.cpp
     src/gnc/sensors.cpp
     src/gnc/navigation.cpp
+    src/gnc/navigation_step.cpp
     include/gnc/thrust_vector_control.hpp
     include/gnc/sensors.hpp
     include/gnc/navigation.hpp
 )
 
-target_include_directories(rocket_cpp PRIVATE include)
-
-target_link_libraries(rocket_cpp PRIVATE
-    Eigen3::Eigen
-    PkgConfig::LIBZIP
-    PkgConfig::TINYXML2
+add_executable(rocket_cpp
+    src/main.cpp
+    src/cli_args.cpp
+    include/cli_args.hpp
+    ${ROCKET_CORE_SOURCES}
 )
+
+# Goal: an offline, three-thread genetic-algorithm search over
+# NavigationStep's PID gains -- not part of the flight computer itself,
+# so it gets its own entry point instead of a mode flag on rocket_cpp,
+# but reuses the exact same simulation/loader code via
+# ROCKET_CORE_SOURCES. Also pulls in cli_args.cpp for findProjectRoot()
+# alone (parseArgs() goes unused here) -- splitting that one function
+# into its own file isn't worth it just to avoid linking a few unused
+# bytes.
+add_executable(pid_ga_tuner
+    src/tuning/main.cpp
+    src/tuning/pid_ga_tuner.cpp
+    src/tuning/pid_ga_runner.cpp
+    include/tuning/pid_ga_tuner.hpp
+    src/cli_args.cpp
+    include/cli_args.hpp
+    ${ROCKET_CORE_SOURCES}
+)
+
+foreach(target rocket_cpp pid_ga_tuner)
+    target_include_directories(${target} PRIVATE include)
+    target_link_libraries(${target} PRIVATE
+        Eigen3::Eigen
+        PkgConfig::LIBZIP
+        PkgConfig::TINYXML2
+        Threads::Threads
+    )
+endforeach()
