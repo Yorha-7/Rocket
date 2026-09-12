@@ -4,26 +4,28 @@
 #include <algorithm>
 #include <cmath>
 
+// ##### Constructor #####
+// Goal: lock in the aim point, refuse an unsurvivable one at construction
+// (not mid-flight), and size the position-filter gains once from the
+// sim's own dt and this project's real sensor noise numbers.
 Navigation::Navigation(const Eigen::Vector3d& target_position, double dt) : target_position_(target_position) {
     if (target_position.z() <= MIN_TARGET_ALTITUDE_M) {
-        // Fail at construction, not mid-flight -- a bad target should
-        // never even get to fly.
         throw std::invalid_argument(
             "Navigation target is on/near the ground (z=" + std::to_string(target_position.z()) +
             "m, minimum " + std::to_string(MIN_TARGET_ALTITUDE_M) +
             "m) -- aiming the nose there means aiming thrust into the ground.");
     }
 
-    // Position-estimator gains, sized once from this project's own real
-    // sensor numbers -- see estimatePosition()'s doc comment.
     computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_HORIZONTAL_SIGMA_M, dt, horizontal_alpha_, horizontal_beta_);
     computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_VERTICAL_SIGMA_M, dt, vertical_alpha_, vertical_beta_);
 }
 
-// Steady-state alpha/beta relation for a g-h filter (Wikipedia, "Alpha
-// beta filter"): given the ratio of process uncertainty to measurement
-// uncertainty (lambda), this is the closed-form gain pair that balances
-// noise rejection against tracking lag, instead of hand-picked constants.
+// ##### computeAlphaBeta() #####
+// Goal: derive the filter's own gain pair instead of hand-picking one --
+// the steady-state alpha/beta relation for a g-h filter, given the ratio
+// of process uncertainty to measurement uncertainty (lambda). Balances
+// how much to trust the accelerometer's prediction against how much to
+// trust each GPS correction.
 void Navigation::computeAlphaBeta(double sigma_process, double sigma_meas, double dt,
                                    double& alpha, double& beta) {
     double lambda = sigma_process * dt * dt / sigma_meas;
@@ -32,45 +34,43 @@ void Navigation::computeAlphaBeta(double sigma_process, double sigma_meas, doubl
     beta = 2.0 * (2.0 - alpha) - 4.0 * std::sqrt(1.0 - alpha);
 }
 
-// Blends the noisy GPS fix with the accelerometer's own double-integrated
-// motion -- an alpha-beta (g-h) filter, "acceleration-aided": the
-// prediction step uses the accelerometer's actual measured acceleration
-// each step rather than assuming constant velocity the way a textbook
-// alpha-beta filter does, since a real measurement is available instead
-// of nothing. R is the current body->world rotation (shared with the
-// caller so this doesn't rebuild it a second time).
+// ##### estimatePosition() #####
+// Goal: blend the noisy GPS fix with the accelerometer's own double-
+// integrated motion -- predict from the accelerometer each step
+// ("acceleration-aided", since a real measurement exists instead of
+// assuming constant velocity), then correct both position AND velocity
+// from how far off that prediction was from GPS. R is the current
+// body->world rotation, passed in from the caller so it isn't rebuilt twice.
 Eigen::Vector3d Navigation::estimatePosition(const sensors::Gps& gps, const sensors::Gyro& gyro,
                                               const Eigen::Matrix3d& R, double dt) {
     if (!position_filter_initialized_) {
-        // Bootstrap from the first GPS fix -- Navigation has no other
-        // source of an absolute starting position, it only ever sees
-        // sensor readings, never the launch pad's true coordinates.
+        // Goal: bootstrap from the first GPS fix -- this class has no
+        // other source of an absolute starting position, it only ever
+        // sees sensor readings, never the launch pad's true coordinates.
         fused_position_ = gps.readPosition();
         fused_velocity_ = Eigen::Vector3d::Zero();
         position_filter_initialized_ = true;
         return fused_position_;
     }
 
-    // Undo what Gyro::update() did to build readAccel(): rotate the
-    // (noisy) proper acceleration back to world frame, then add gravity
-    // back to recover total kinematic acceleration -- the quantity that
+    // Goal: undo what Gyro::update() did to build readAccel() -- rotate
+    // the (noisy) proper acceleration back to world frame, add gravity
+    // back, and recover total kinematic acceleration, the quantity that
     // actually integrates into velocity/position.
     const double g0 = 9.80665;
     Eigen::Vector3d gravity_world(0, 0, -g0);
     Eigen::Vector3d total_accel_world = R * gyro.readAccel() + gravity_world;
 
-    // Predict from the accelerometer alone -- accurate over one short
-    // dt, but the double integration drifts without bound if left
-    // uncorrected (accelerometer bias, double-integrated, is exactly the
-    // kind of error that grows unchecked -- see Staging Notes).
+    // Goal: predict from the accelerometer alone -- accurate over one
+    // short dt, but drifts without bound if never corrected (bias,
+    // double-integrated, grows unchecked).
     fused_velocity_ += total_accel_world * dt;
     Eigen::Vector3d predicted_position = fused_position_ + fused_velocity_ * dt;
 
-    // Correct BOTH position and velocity from the GPS residual -- the
-    // classic alpha-beta update. Correcting velocity too (not just
+    // Goal: correct BOTH position and velocity from the GPS residual --
+    // the classic alpha-beta update. Correcting velocity too (not just
     // position) is what keeps fused_velocity_ from drifting away
-    // unbounded between GPS corrections; a position-only blend would
-    // still leave the velocity state free-running.
+    // unbounded between GPS corrections.
     Eigen::Vector3d residual = gps.readPosition() - predicted_position;
     Eigen::Vector3d alpha(horizontal_alpha_, horizontal_alpha_, vertical_alpha_);
     Eigen::Vector3d beta(horizontal_beta_, horizontal_beta_, vertical_beta_);
@@ -80,11 +80,14 @@ Eigen::Vector3d Navigation::estimatePosition(const sensors::Gps& gps, const sens
     return fused_position_;
 }
 
+// ##### computeTvcTarget() #####
+// Goal: the guidance decision itself -- read the current position/
+// attitude, work out the angle from the nose to the target, shape it
+// through a PID, and hand back a body-frame direction for TVC to aim at.
 Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro, double dt) {
-    // Attitude is needed both to fuse the accelerometer into the position
-    // estimate below and to rotate the target direction into body frame
-    // further down -- computed once here, shared by both instead of
-    // rebuilding it twice.
+    // Goal: get the current attitude once -- needed both to fuse the
+    // accelerometer into the position estimate below and to rotate the
+    // target direction into body frame further down.
     RocketState orientation_state{};
     orientation_state.position = Eigen::Vector3d::Zero();      // unused by rocketToNedFrame
     orientation_state.velocity = Eigen::Vector3d::Zero();      // unused
@@ -93,46 +96,44 @@ Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sens
     orientation_state.orientation = gyro.readOrientation();    // the one field that matters
     Eigen::Matrix3d R = RocketKinematics::rocketToNedFrame(orientation_state);
 
-    // Fused GPS+accelerometer estimate, not the raw GPS fix -- see
-    // estimatePosition()'s doc comment and the class doc comment for why.
+    // Goal: use the FUSED GPS+accelerometer estimate, not the raw GPS
+    // fix -- see estimatePosition() and this class's own doc comment.
     Eigen::Vector3d position = estimatePosition(gps, gyro, R, dt);
 
-    // Below the activation floor: hold neutral and keep the integrators
-    // at zero, so whenever guidance DOES activate it starts from a clean
-    // slate instead of carrying windup accumulated while it was sitting
-    // idle on the pad (see class doc comment for why this floor exists).
+    // Goal: stay neutral below the activation floor, and reset the
+    // integrators while doing so -- so whenever guidance DOES activate
+    // it starts clean instead of carrying windup from sitting idle.
     if (position.z() < ACTIVATION_ALTITUDE_M) {
         integral_pitch_ = 0.0;
         integral_yaw_ = 0.0;
         return Eigen::Vector3d(0, 0, 1);
     }
 
-    // Straight-line vector from the fused position estimate to the
-    // target, still in world frame (north/east/up) at this point.
+    // Goal: get the straight-line vector from here to the target, still
+    // in world frame.
     Eigen::Vector3d to_target_world = target_position_ - position;
 
     if (to_target_world.norm() < 1e-6) {
         return Eigen::Vector3d(0, 0, 1);  // already there -- hold neutral, nothing to aim at
     }
 
-    // R rotates body->world, so its transpose (= inverse, R is a pure
-    // rotation) takes our world-frame aim vector into body frame.
+    // Goal: convert that world-frame aim vector into BODY frame -- R
+    // rotates body->world, so its transpose (its inverse, since it's a
+    // pure rotation) does the reverse conversion.
     Eigen::Vector3d dir_body = (R.transpose() * to_target_world).normalized();
 
-    // Decompose into per-axis angular error, same asin geometry
-    // ThrustVectorControl uses internally (nozzle deflection vs. force
-    // direction) -- applied here to the TARGET direction itself, i.e.
-    // how far off dead-ahead (body +Z, the nose) the target currently
-    // sits, split into the pitch plane (X-Z) and yaw plane (Y-Z).
+    // Goal: split that body-frame direction into a pitch-plane angle and
+    // a yaw-plane angle -- how far off dead-ahead (body +Z, the nose)
+    // the target currently sits, same asin geometry
+    // ThrustVectorControl uses internally.
     double err_pitch = std::asin(std::max(-1.0, std::min(1.0, dir_body.x())));
     double cos_p = std::cos(err_pitch);
     double err_yaw = (std::abs(cos_p) > 1e-6)
         ? std::asin(std::max(-1.0, std::min(1.0, dir_body.y() / cos_p)))
         : 0.0;
 
-    // Integral: accumulate error over time, clamped so a long saturated
-    // stretch can't build up more windup than one actuator swing is
-    // worth (see MAX_GIMBAL_RAD's declaration comment).
+    // Goal: accumulate the integral term, clamped so a long saturated
+    // stretch can't build more windup than one actuator swing is worth.
     integral_pitch_ += err_pitch * dt;
     integral_yaw_ += err_yaw * dt;
     double max_integral = (KI > 1e-9) ? (MAX_GIMBAL_RAD / KI) : 0.0;
@@ -141,11 +142,10 @@ Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sens
         integral_yaw_ = std::max(-max_integral, std::min(max_integral, integral_yaw_));
     }
 
-    // Derivative: straight from the gyro's own rate reading, not a
-    // differentiated (noisy) error -- see class doc comment. Sign is
-    // negative because increasing pitch/yaw rate in the direction that
-    // CLOSES the error should reduce the command (anticipatory braking,
-    // not fighting the correction that's already happening).
+    // Goal: the derivative term, straight from the gyro's own rate
+    // reading rather than differentiating a noisy angle. Negative sign:
+    // rotating in the direction that's already CLOSING the error should
+    // reduce the command (anticipatory braking), not add to it.
     Eigen::Vector3d rate = gyro.readAngularVel();
     double d_pitch = -rate.y();
     double d_yaw = -rate.z();
@@ -153,13 +153,12 @@ Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sens
     double u_pitch = KP * err_pitch + KI * integral_pitch_ + KD * d_pitch;
     double u_yaw = KP * err_yaw + KI * integral_yaw_ + KD * d_yaw;
 
-    // Reconstruct a direction vector from the PID-shaped angles, using
-    // the exact inverse of the decomposition above -- with KP=1, KI=KD=0
-    // this round-trips to precisely dir_body, i.e. the old direct-
-    // passthrough behavior. ThrustVectorControl::commandForceDirection
-    // re-normalizes and re-decomposes this on the other end (and clamps
-    // to the actuator's own physical travel limit) -- this class doesn't
-    // need to duplicate that clamp, just hand over the shaped direction.
+    // Goal: rebuild a direction vector from the PID-shaped angles, the
+    // exact inverse of the split above -- with KP=1, KI=KD=0 this
+    // round-trips to precisely dir_body, i.e. the old direct-passthrough
+    // behavior. ThrustVectorControl re-normalizes/re-decomposes this on
+    // its end (and clamps to the actuator's own travel limit), so this
+    // class doesn't need to duplicate that clamp.
     double su = std::sin(u_pitch), cu = std::cos(u_pitch);
     double sy = std::sin(u_yaw), cy = std::cos(u_yaw);
     return Eigen::Vector3d(su, cu * sy, cu * cy);

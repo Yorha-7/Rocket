@@ -10,12 +10,36 @@
 #include <iomanip>
 #include <cstdlib>
 #include <unistd.h>
+#include <climits>
 
-// Reads data/tvc_test_sequence.csv (time-segment table: t_start_s,t_end_s,
-// target_x,target_y,target_z,note) and expands it into one target-direction
-// vector per simulation step, so RocketKinematics::simulate() can command
-// ThrustVectorControl the same way every step without knowing about time
-// segments itself. Steps past the last segment's t_end_s get no deflection.
+// ##### findProjectRoot() #####
+// Goal: work out where THIS repo actually lives on disk, instead of
+// hardcoding one machine's own absolute path -- reads /proc/self/exe
+// (the running binary's own real, resolved location, regardless of how
+// it was invoked or what the current directory happens to be) and walks
+// up from there. The executable always lives at <repo_root>/rocket_cpp/
+// build/rocket_cpp, so two levels up from its own directory is the repo
+// root.
+std::string findProjectRoot() {
+    char path[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+    if (len == -1) return ".";  // fallback: trust the caller's own working directory
+    path[len] = '\0';
+
+    std::string exe_dir(path);
+    size_t last_slash = exe_dir.find_last_of('/');
+    exe_dir = (last_slash == std::string::npos) ? "." : exe_dir.substr(0, last_slash);
+
+    return exe_dir + "/..";  // build/ -> rocket_cpp/
+}
+
+// ##### loadTvcTestSequence() #####
+// Goal: read data/tvc_test_sequence.csv (time-segment table: t_start_s,
+// t_end_s, target_x,target_y,target_z, note) and expand it into one
+// target-direction vector per simulation step, so
+// RocketKinematics::simulate() can command ThrustVectorControl the same
+// way every step without knowing about time segments itself. Steps past
+// the last segment's t_end_s get no deflection.
 std::vector<Eigen::Vector3d> loadTvcTestSequence(const std::string& csv_path, double dt, int n_steps) {
     struct Segment { double t_start, t_end; Eigen::Vector3d target; };
     std::vector<Segment> segments;
@@ -47,19 +71,21 @@ std::vector<Eigen::Vector3d> loadTvcTestSequence(const std::string& csv_path, do
 }
 
 int main() {
-    // ============================================================
-    // Load the rocket's geometry, launch conditions, and full flight
-    // history (thrust/mass/drag/CP/CG/inertia over time) straight from
-    // its OpenRocket design file. No parameters are hand-copied here.
-    // ============================================================
-    const std::string ork_path = "/media/jayesh/Acer/Users/scien/Rocket/artifacts/rocket.ork";
+    // ##### Load the rocket #####
+    // Goal: pull geometry, launch conditions, and the full flight
+    // history (thrust/mass over time) straight from the OpenRocket
+    // design file -- no parameters hand-copied here. Path is built from
+    // the repo root (see findProjectRoot()), not one machine's hardcoded
+    // absolute path.
+    const std::string project_root = findProjectRoot();
+    const std::string ork_path = project_root + "/../artifacts/rocket.ork";
 
     SimulationConfig config;
     config.dt = 0.001;            // our integrator's step size, not part of the rocket's design
-    config.sim_duration = 300.0; // upper bound; the sim stops at ground contact regardless.
-    // Was 120s -- too tight for a wide/high off-axis target (TVC-driven
-    // trajectories can end up in an extended near-horizontal glide after
-    // burnout, not a quick ballistic fall -- see Staging Notes).
+    // Upper bound only -- ground contact ends the sim earlier in the
+    // normal case. 300s (was 120s) gives room for a wide/high off-axis
+    // target's trajectory to actually finish (see README Staging Notes).
+    config.sim_duration = 300.0;
 
     std::cout << "Loading rocket design and flight data from " << ork_path << "...\n";
     OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
@@ -67,19 +93,17 @@ int main() {
     config.launch_height = rocket.launch_conditions.launch_height;
     config.init_tilt = rocket.launch_conditions.init_tilt;
 
-    // Every simulation embedded in this .ork launches from a dead-vertical
-    // rod (launchrodangle = 0), so with no perturbation the pitch model
-    // never has anything to restore from. Override with a small nonzero
-    // tilt so the pitch dynamics (gravity/aero/damping torque) actually
-    // show something, instead of leaving it real but silent.
+    // Goal: every simulation embedded in this .ork launches from a
+    // dead-vertical rod, so with zero perturbation the pitch model would
+    // never have anything to restore from. Override with a small nonzero
+    // tilt so pitch dynamics actually show something real, not silent.
     const double INIT_TILT_OVERRIDE_DEG = 0.0;
     config.init_tilt = INIT_TILT_OVERRIDE_DEG;
 
-    // Same idea, but for yaw: the .ork has no yaw/azimuth concept at all,
-    // so this is a small fixed launch-azimuth deviation rather than
-    // anything read from the design file. Stays constant for the whole
-    // flight -- there's no yaw torque model yet to let it evolve.
-    const double INIT_YAW_OVERRIDE_DEG = 0.0;
+    // Goal: same idea for yaw -- the .ork has no yaw/azimuth concept at
+    // all, so this is a fixed launch-azimuth deviation, not anything
+    // read from the design file.
+    const double INIT_YAW_OVERRIDE_DEG = 10.0;
     config.init_yaw = INIT_YAW_OVERRIDE_DEG;
 
     const RocketParams& params = rocket.params;
@@ -93,11 +117,11 @@ int main() {
     std::cout << "Loaded " << flight_data.time.size() << " flight-data points (thrust/mass)\n";
     std::cout << "Total liftoff mass (from .ork motor data): " << flight_data.mass.front() << " g\n";
 
-    // ============================================================
-    // Sanity-check our own computed coefficients/mass-properties (not
-    // read from the .ork -- these come from AerodynamicsModel and
-    // VehicleMassModel, built from the vehicle's own geometry).
-    // ============================================================
+    // ##### Sanity-check our own computed physics #####
+    // Goal: print what AerodynamicsModel/VehicleMassModel work out from
+    // the vehicle's own geometry (NOT read from the .ork's own solved
+    // simulation) so a bad geometry read shows up here, before a full
+    // flight is even run.
     AerodynamicsModel aero(params);
     VehicleMassModel mass_model(rocket.mass_components, params.body_diameter, params.body_length);
 
@@ -117,9 +141,7 @@ int main() {
     std::cout << "Computed Cd @ 50 m/s, 100 m altitude: " << sample_coeffs.Cd
               << " (Cn_alpha=" << sample_coeffs.Cn_alpha << "/rad)\n";
 
-    // ============================================================
-    // Run the simulation
-    // ============================================================
+    // ##### Run the simulation #####
     RocketKinematics sim(params, config, rocket.mass_components);
 
     std::cout << "\nRocket Simulation (3DOF translation + pitch/yaw dynamics + TVC/Navigation) "
@@ -129,11 +151,8 @@ int main() {
               << "m, init_tilt=" << config.init_tilt
               << "deg, dt=" << config.dt << "s\n";
 
-    // Navigation test target -- hardcoded here for now (no mission-planning
-    // input yet, per the current staging-area scope). Comfortably above
-    // Navigation's MIN_TARGET_ALTITUDE_M ground-safety floor, and within
-    // the kind of x/y range the TVC test sequence already showed this
-    // vehicle's actuator authority can actually reach.
+    // Goal: fix the guidance target for this run -- hardcoded for now,
+    // no mission-planning input yet (staging-area scope).
     const Eigen::Vector3d NAV_TARGET(0.0, 350.0, 1500.0);
     Navigation navigation(NAV_TARGET, config.dt);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
@@ -141,9 +160,9 @@ int main() {
 
     auto states = sim.simulate(config.sim_duration, flight_data, {}, &navigation);
 
-    // ============================================================
-    // Extract time series for output and plotting
-    // ============================================================
+    // ##### Extract time series for output and plotting #####
+    // Goal: unpack the raw RocketState history into the flat per-column
+    // arrays the CSV writer and matplotlib scripts actually want.
     std::vector<double> time_vec, x_vec, y_vec, height_vec, velocity_vec, pitch_vec, yaw_vec;
     std::vector<double> gimbal_pitch_vec, gimbal_yaw_vec;
     time_vec.reserve(states.size());
@@ -168,7 +187,9 @@ int main() {
         gimbal_yaw_vec.push_back(states[i].gimbal_yaw_rad * 180.0 / M_PI);
     }
 
-    // Angular velocity (pitch rate) and angular acceleration
+    // Goal: angular velocity/acceleration aren't stored directly --
+    // derive rate from the state history, then acceleration by
+    // differencing that.
     std::vector<double> ang_vel_vec(states.size(), 0.0);
     std::vector<double> ang_accel_vec(states.size(), 0.0);
     for (size_t i = 0; i < states.size(); ++i) {
@@ -179,7 +200,7 @@ int main() {
     }
     ang_accel_vec[0] = ang_accel_vec[1];
 
-    // Find apogee
+    // Goal: find the highest point the flight actually reached, and when.
     double t_apogee = 0.0, h_apogee = 0.0;
     for (size_t i = 0; i < states.size(); ++i) {
         if (states[i].position(2) > h_apogee) {
@@ -188,9 +209,9 @@ int main() {
         }
     }
 
-    // Net world-frame force and the pitch-torque breakdown at each logged
-    // state -- not part of the integration itself, just recomputed from
-    // the same physics for the Forces/Torque Analysis plots.
+    // Goal: recompute the same force/torque breakdown step() used
+    // internally, purely for the CSV's Forces/Torque Analysis columns --
+    // not part of the integration itself.
     std::vector<double> fx_vec(states.size(), 0.0), fy_vec(states.size(), 0.0), fz_vec(states.size(), 0.0);
     std::vector<double> thrust_vec(states.size(), 0.0);
     std::vector<double> torque_gravity_vec(states.size(), 0.0);
@@ -210,15 +231,13 @@ int main() {
         torque_damping_vec[i] = torques.damping;
     }
 
-    // ============================================================
-    // Save CSV output
-    // ============================================================
-    // chdir into the project root first so the CSV always lands in the
-    // same place regardless of which directory the binary was launched
-    // from (e.g. running from build/ used to leave a stale CSV read by
-    // the plot script, instead of this run's fresh one).
-    const char* project_root = "/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp";
-    bool in_project_root = (chdir(project_root) == 0);
+    // ##### Save CSV output #####
+    // Goal: land the CSV in the project root every time, regardless of
+    // which directory the binary was launched from -- otherwise running
+    // from build/ used to leave a stale CSV behind for the plot script
+    // to read instead of this run's fresh one. Reuses the same
+    // project_root computed above, not a second hardcoded path.
+    bool in_project_root = (chdir(project_root.c_str()) == 0);
     if (!in_project_root) {
         std::cerr << "Warning: could not chdir to project root; writing CSV to current directory.\n";
     }
@@ -238,9 +257,7 @@ int main() {
     }
     csv.close();
 
-    // ============================================================
-    // Generate PNG plot via Python/matplotlib
-    // ============================================================
+    // ##### Generate PNG plot via Python/matplotlib #####
     std::cout << "\nGenerating plots via Python/matplotlib...\n";
     if (in_project_root) {
         int result = system("python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_analysis.png");
@@ -253,9 +270,7 @@ int main() {
         std::cerr << "Warning: Could not change to project root directory. Skipping plot.\n";
     }
 
-    // ============================================================
-    // Console summary
-    // ============================================================
+    // ##### Console summary #####
     std::cout << "\nApogee: " << h_apogee << " m at t=" << t_apogee << " s\n";
     std::cout << "Simulation complete.\n";
     std::cout << "Results: rocket_trajectory.csv, rocket_analysis.png, rocket_trajectory.png\n";

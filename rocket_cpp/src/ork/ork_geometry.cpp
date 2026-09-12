@@ -9,10 +9,13 @@ using tinyxml2::XMLDocument;
 
 namespace {
 
-// Depth-first search for the first descendant (or self) element with the
-// given tag name. Component nesting in an .ork file (stage ->
-// subcomponents -> bodytube -> subcomponents -> ...) can vary between
-// designs, so we search for components by name rather than hardcode a path.
+// ##### XML helpers #####
+// Goal: small, reusable pieces of "find this tag, read its value" logic
+// so the actual geometry-reading code below doesn't repeat itself.
+
+// Goal: find the first element named `name` anywhere under `root`
+// (depth-first), since component nesting can vary between .ork designs
+// -- search by name instead of hardcoding a fixed path.
 const XMLElement* findFirst(const XMLElement* root, const char* name) {
     if (!root) return nullptr;
     if (std::strcmp(root->Name(), name) == 0) return root;
@@ -23,8 +26,8 @@ const XMLElement* findFirst(const XMLElement* root, const char* name) {
     return nullptr;
 }
 
-// Reads a direct child element's text as a double, or `fallback` if the
-// child is missing. Handles OpenRocket's "auto <value>" radius syntax by
+// Goal: read a direct child's text as a double, or fall back if it's
+// missing. Also handles OpenRocket's "auto <value>" radius syntax by
 // taking the last whitespace-separated token.
 double childDouble(const XMLElement* parent, const char* tag, double fallback = 0.0) {
     if (!parent) return fallback;
@@ -49,8 +52,8 @@ std::string childText(const XMLElement* parent, const char* tag, const std::stri
     return child->GetText();
 }
 
-// OpenRocket distinguishes more nose shapes than RocketParams does;
-// unrecognized shapes fall back to ogive, the most common case.
+// Goal: map OpenRocket's nose-shape names onto this codebase's shape
+// codes -- unrecognized shapes fall back to ogive, the most common case.
 int noseShapeCode(const std::string& shape) {
     if (shape == "conical") return 0;
     if (shape == "ogive") return 1;
@@ -59,9 +62,9 @@ int noseShapeCode(const std::string& shape) {
     return 1;
 }
 
-// Approximate RMS roughness (m) for OpenRocket's named surface finishes.
-// Only consumed by the staged aerodynamics.hpp model today, so exact
-// values aren't critical — these are typical published figures.
+// Goal: approximate RMS roughness (m) for OpenRocket's named surface
+// finishes -- typical published figures, not critical precision, since
+// only the staged aerodynamics.hpp model reads this today.
 double roughnessForFinish(const std::string& finish) {
     if (finish == "polished") return 2.0e-6;
     if (finish == "smooth") return 6.0e-6;
@@ -71,6 +74,11 @@ double roughnessForFinish(const std::string& finish) {
 
 }  // namespace
 
+// ##### parseOrkGeometry() #####
+// Goal: locate the nose cone, body tube, and (optional) fin set in the
+// XML, then read each one's own shape/size fields straight into a
+// RocketParams -- no aerodynamic computation happens here, just reading
+// numbers off the page.
 RocketParams parseOrkGeometry(const std::string& xml) {
     XMLDocument doc;
     if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) {
@@ -110,11 +118,11 @@ RocketParams parseOrkGeometry(const std::string& xml) {
         params.fin_thickness = childDouble(finset, "thickness");
         params.fin_cant = childDouble(finset, "cant");
 
-        // Fin position is type="bottom": offset from the tube's aft end,
-        // added (not subtracted) -- offset 0 means flush with the aft end,
-        // negative moves the fin forward, into the tube. Validated against
-        // this design's centering-ring/motor-mount offsets in
-        // ork_mass_components.cpp.
+        // Goal: fin position is type="bottom" -- an offset from the
+        // tube's aft end, ADDED (offset 0 = flush with the aft end,
+        // negative moves the fin forward, into the tube). Validated
+        // against this design's own centering-ring/motor-mount offsets
+        // in ork_mass_components.cpp.
         const XMLElement* position = finset->FirstChildElement("position");
         double offset = (position && position->GetText()) ? std::stod(position->GetText()) : 0.0;
         double tube_aft_from_nose = params.nose_length + params.body_length;
@@ -126,8 +134,8 @@ RocketParams parseOrkGeometry(const std::string& xml) {
         params.fin_root_le_position = 0.0;
     }
 
-    // Informational only — the sim reads the real per-step thrust curve
-    // from FlightData instead of using these.
+    // Goal: leave these informational -- the sim reads the real per-step
+    // thrust curve from FlightData instead of using these fields.
     params.thrust_duration = 0.0;
     params.max_thrust = 0.0;
 

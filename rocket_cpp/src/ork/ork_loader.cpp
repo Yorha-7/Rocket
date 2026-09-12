@@ -4,6 +4,11 @@
 #include "ork/ork_flightdata.hpp"
 #include "ork/ork_mass_components.hpp"
 
+// ##### loadOrkRocket() #####
+// Goal: read the .ork's raw XML once, then hand that same text to each
+// specialist parser (geometry, flight data, launch conditions, mass
+// components) -- this function doesn't interpret any rocket data
+// itself, it just wires the pieces together.
 OrkRocket loadOrkRocket(const std::string& ork_path, double dt,
                         const std::string& motor_configid) {
     std::string xml = readOrkXml(ork_path);

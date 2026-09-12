@@ -3,6 +3,11 @@
 #include <stdexcept>
 #include <vector>
 
+// ##### readOrkXml() #####
+// Goal: open the .ork as a zip archive, find the "rocket.ork" XML entry
+// inside it, read the whole thing into memory, and hand it back as a
+// plain string -- three steps: open the archive, locate + open that one
+// entry, read its bytes out.
 std::string readOrkXml(const std::string& ork_path) {
     int err = 0;
     zip_t* archive = zip_open(ork_path.c_str(), ZIP_RDONLY, &err);

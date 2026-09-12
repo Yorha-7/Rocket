@@ -2,40 +2,38 @@
 
 #include "sim/rocket_types.hpp"
 
-// Computes drag/normal-force coefficients and the center of pressure from
-// the vehicle's own geometry (Barrowman method) -- nothing here is read
-// from OpenRocket's own solved simulation. Implementation is split across
-// aerodynamics.cpp (coefficients + Barrowman CP) and atmosphere.cpp
-// (atmosphere model + Reynolds/skin-friction helpers), both methods of
-// this one class.
+// ##### AerodynamicsModel #####
+// Goal: work out every drag/turning-force coefficient, and the center of
+// pressure, straight from the vehicle's own shape (Barrowman method) --
+// nothing here is read from OpenRocket's own solved simulation. Split
+// across aerodynamics.cpp (coefficients + CP) and atmosphere.cpp (air
+// model + Reynolds/skin-friction helpers), both part of this one class.
 class AerodynamicsModel {
-public:  // public (usable from outside this class -- this is the class's interface)
-
-    // explicit (stops the compiler from silently turning a RocketParams into
-    // an AerodynamicsModel where you didn't ask for it) constructor. params
-    // is a const reference (an alias to the caller's object, not a copy --
-    // faster, but the caller's RocketParams must stay alive as long as this does).
+public:
+    // explicit: stops the compiler from silently turning a RocketParams
+    // into an AerodynamicsModel where that wasn't the intent.
     explicit AerodynamicsModel(const RocketParams& params);
 
-    // Main entry point: every drag/normal-force coefficient at one flight condition.
-    // Trailing "const" (after the parentheses) promises this method won't
-    // modify the object it's called on.
+    // Goal: the one call site that pulls every coefficient together for
+    // a given flight condition.
     AerodynamicCoefficients computeCoefficients(const FlightConditions& fc) const;
 
-    // Barrowman center of pressure, cm from the nose tip. Geometry-only in
-    // the subsonic regime -- doesn't need a FlightConditions.
+    // Goal: the Barrowman center of pressure, cm from the nose tip.
+    // Geometry-only in the subsonic regime -- doesn't need a
+    // FlightConditions, so it's computed once and cached by the caller.
     double computeCenterOfPressure() const;
 
-    // Shared atmosphere model, public so the rest of the sim (translation,
-    // pitch dynamics) uses the same air density/speed of sound instead of
-    // a second, inconsistent formula.
+    // Goal: expose the shared atmosphere model so the rest of the sim
+    // (translation, pitch/yaw dynamics) reads the SAME air density and
+    // speed of sound this class uses internally, instead of each keeping
+    // a second, possibly-inconsistent formula.
     double getDensity(double altitude) const;
     double getSpeedOfSound(double altitude) const;
 
-private:  // private (only reachable from inside this class -- implementation details, hidden from callers)
-    const RocketParams& params_;  // reference member (stored alias, not a copy)
+private:
+    const RocketParams& params_;  // reference, not a copy -- caller must outlive this object
 
-    // ---- Body ----
+    // ##### Body #####
     double computeBodyCd(const FlightConditions& fc) const;
     double computeBodyCdSubsonic(const FlightConditions& fc) const;
     double computeBodyCdTransonic(const FlightConditions& fc) const;
@@ -44,21 +42,21 @@ private:  // private (only reachable from inside this class -- implementation de
     double computeBodyCmAlpha(double cn_alpha_body) const;
     double computeNoseCp() const;
 
-    // ---- Fins ----
+    // ##### Fins #####
     double computeFinCd(const FlightConditions& fc) const;
     double computeFinCnAlpha(double mach) const;
     double computeFinCmAlpha(double cn_alpha_fin) const;
     double computeFinCp() const;
     double computeBodyFinInterference() const;
 
-    // ---- Drag components beyond body/fin form drag ----
+    // ##### Drag beyond body/fin form drag #####
     double computeBaseDrag(const FlightConditions& fc) const;
     double computeBoatTailDrag(const FlightConditions& fc) const;
     double computeWaveDrag(const FlightConditions& fc) const;
     double computeFrictionDrag(const FlightConditions& fc) const;
     double computeWettedArea() const;
 
-    // ---- Atmosphere / flow helpers ----
+    // ##### Atmosphere / flow helpers (atmosphere.cpp) #####
     double getTemperature(double altitude) const;
     double getViscosity(double altitude) const;
     double getSpecificHeatRatio(double altitude) const;
@@ -67,9 +65,9 @@ private:  // private (only reachable from inside this class -- implementation de
     double computeSkinFrictionCf(double Re, double roughness, double length) const;
     double computeTransitionReynolds(double roughness, double length) const;
 
-    // Standard atmosphere constants.
-    // static (one shared value for the whole class, not one per object)
-    // constexpr (fixed number baked in at compile time, not computed at runtime).
+    // Goal: one shared, fixed set of standard-atmosphere constants,
+    // baked in at compile time (static constexpr) instead of re-typed
+    // per method.
     static constexpr double R_GAS = 287.058;  // J/(kg*K)
     static constexpr double G0 = 9.80665;
     static constexpr double T0 = 288.15;

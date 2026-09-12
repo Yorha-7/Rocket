@@ -2,21 +2,23 @@
 #include <cmath>
 #include <algorithm>
 
-// ============================================================
-// Barrowman-method aerodynamics: every coefficient here comes from the
-// vehicle's own geometry (nose shape/length, body diameter/length, fin
-// planform), not from a borrowed simulation result. Subsonic (this
-// vehicle never exceeds Mach 0.28); transonic/supersonic paths are
-// placeholders since they're never exercised at these speeds.
-// ============================================================
+// ##### Barrowman aerodynamics, the big picture #####
+// Goal: every coefficient in this file comes from the vehicle's own
+// geometry (nose shape/length, body diameter/length, fin planform), not
+// a borrowed simulation result. Subsonic only in practice -- this
+// vehicle never exceeds Mach ~0.28 -- so the transonic/supersonic paths
+// below are honest placeholders, not missing work.
 
 AerodynamicsModel::AerodynamicsModel(const RocketParams& params) : params_(params) {}
 
-// ---- Body ----
+// ##### Body #####
+// Goal: work out how much of the vehicle's turning force and drag comes
+// from the body tube + nose alone, before adding the fins.
 
-// Barrowman's classic result: a nose that transitions fully into a
-// constant-diameter body contributes exactly 2/rad (referenced to that
-// body's own cross-sectional area), independent of nose shape or length.
+// Goal: Barrowman's classic result -- a nose that blends into a
+// constant-diameter body contributes exactly 2/rad of normal-force slope
+// (referenced to that body's own cross-section), regardless of nose
+// shape or length.
 double AerodynamicsModel::computeBodyCnAlpha(double mach) const {
     double beta2 = 1.0 - mach * mach;
     double compressibility = (beta2 > 0.01) ? 1.0 / std::sqrt(beta2) : 10.0;  // guard near Mach 1
@@ -28,8 +30,9 @@ double AerodynamicsModel::computeBodyCmAlpha(double cn_alpha_body) const {
     return -cn_alpha_body * (computeNoseCp() / d_cm);
 }
 
-// Standard closed-form nose CP fractions (fraction of nose length, from
-// the tip) for the shapes this codebase distinguishes.
+// Goal: look up the nose's own center of pressure as a standard
+// closed-form fraction of its length, one fraction per shape this
+// codebase distinguishes.
 double AerodynamicsModel::computeNoseCp() const {
     double L_cm = params_.nose_length * 100.0;
     double fraction;
@@ -48,16 +51,17 @@ double AerodynamicsModel::computeBodyCd(const FlightConditions& fc) const {
     return computeBodyCdSupersonic(fc);
 }
 
-// A pointed nose doesn't separate subsonic flow, so its own pressure drag
-// is essentially zero -- friction and base drag dominate instead (both
-// computed separately). This is the correct Barrowman result, not a
-// missing implementation.
+// Goal: a pointed nose doesn't separate subsonic flow, so its own
+// pressure drag is genuinely ~zero -- friction and base drag (computed
+// separately) dominate instead. Zero here is the correct Barrowman
+// result, not a stub.
 double AerodynamicsModel::computeBodyCdSubsonic(const FlightConditions& /*fc*/) const {
     return 0.0;
 }
 
-// Placeholders: this vehicle's fastest simulated flight is Mach ~0.28, so
-// these paths are never exercised. Rough order-of-magnitude values only.
+// Goal: placeholders only -- this vehicle's fastest simulated flight is
+// Mach ~0.28, so these paths never actually run. Rough order-of-
+// magnitude numbers, not tuned.
 double AerodynamicsModel::computeBodyCdTransonic(const FlightConditions& /*fc*/) const {
     return 0.1;
 }
@@ -66,10 +70,13 @@ double AerodynamicsModel::computeBodyCdSupersonic(const FlightConditions& /*fc*/
     return 0.2;
 }
 
-// ---- Fins ----
+// ##### Fins #####
+// Goal: same idea as the body section, but for the fin set's own
+// contribution to turning force and drag.
 
-// Barrowman fin normal-force slope for N fins, corrected for body-fin
-// interference (Kfb) and compressibility.
+// Goal: Barrowman fin normal-force slope for N fins, corrected for how
+// much the body blocks/boosts the fins' own airflow (Kfb) and for
+// compressibility.
 double AerodynamicsModel::computeFinCnAlpha(double mach) const {
     if (params_.fin_count <= 0) return 0.0;
 
@@ -94,9 +101,9 @@ double AerodynamicsModel::computeFinCmAlpha(double cn_alpha_fin) const {
     return -cn_alpha_fin * (computeFinCp() / d_cm);
 }
 
-// Standard trapezoid-fin CP: measured from the root leading edge, using
-// root/tip chord, span, and sweep -- the same centroid formula used for
-// the fin set's mass CG in ork_mass_components.cpp.
+// Goal: standard trapezoid-fin centroid formula, measured from the root
+// leading edge -- the same shape formula also used for the fin set's
+// mass CG in ork_mass_components.cpp, kept consistent between the two.
 double AerodynamicsModel::computeFinCp() const {
     double Cr = params_.fin_root_chord;
     double Ct = params_.fin_tip_chord;
@@ -108,20 +115,20 @@ double AerodynamicsModel::computeFinCp() const {
     return root_le_cm + centroid_from_root_le * 100.0;
 }
 
-// Body blocks part of the airflow a fin alone would see, and a fin
-// increases the effective body diameter's normal force -- Kfb captures
-// both, folded into computeFinCnAlpha above.
+// Goal: fold the body-fin interaction into one factor -- the body blocks
+// part of the airflow a fin alone would see, and a fin effectively
+// enlarges the body's own normal-force footprint. Feeds into
+// computeFinCnAlpha above.
 double AerodynamicsModel::computeBodyFinInterference() const {
     double r = params_.body_diameter / 2.0;
     double s = params_.fin_span;
     return 1.0 + r / (s + r);
 }
 
-// Fin profile (pressure) drag from finite thickness -- friction itself is
-// already covered by computeFrictionDrag's whole-vehicle wetted-area
-// total (fins included), so this is just the *extra* pressure drag a
-// thick fin adds over a thin flat plate: Cf x 2(t/c), the standard
-// Hoerner thickness correction, applied to the fins' own wetted area.
+// Goal: the EXTRA pressure drag a fin of finite thickness adds on top of
+// an idealized thin flat plate (friction itself is already counted once,
+// whole-vehicle, in computeFrictionDrag) -- the standard Hoerner
+// thickness correction, Cf x 2(t/c).
 double AerodynamicsModel::computeFinCd(const FlightConditions& fc) const {
     double mean_chord = 0.5 * (params_.fin_root_chord + params_.fin_tip_chord);
     if (mean_chord <= 0.0) return 0.0;
@@ -136,10 +143,13 @@ double AerodynamicsModel::computeFinCd(const FlightConditions& fc) const {
     return Cf * 2.0 * thickness_ratio * fin_wetted_area / params_.reference_area;
 }
 
-// ---- Base / boat-tail ----
+// ##### Base / boat-tail #####
+// Goal: the extra drag from a blunt-cut tail end (base drag) and, if the
+// design has one, a boat-tail's own drag reduction.
 
-// Standard subsonic blunt-base drag correlation, scaled by how much of
-// the reference area the base actually is (1.0 here -- no boat-tail).
+// Goal: standard subsonic blunt-base drag correlation, scaled by how
+// much of the reference area the base actually is (1.0 here -- no
+// boat-tail on this vehicle, base = full body diameter).
 double AerodynamicsModel::computeBaseDrag(const FlightConditions& fc) const {
     double base_r = params_.base_diameter / 2.0;
     double base_area = M_PI * base_r * base_r;
@@ -147,8 +157,9 @@ double AerodynamicsModel::computeBaseDrag(const FlightConditions& fc) const {
     return coeff * (base_area / params_.reference_area);
 }
 
-// Zero when there's no boat-tail (this vehicle) -- kept as a real formula,
-// not a stub, since a future design with boat_tail_length > 0 should work.
+// Goal: zero when there's no boat-tail (this vehicle) -- kept as a real
+// formula rather than a stub so a future design with boat_tail_length >
+// 0 gets correct behavior for free.
 double AerodynamicsModel::computeBoatTailDrag(const FlightConditions& /*fc*/) const {
     if (params_.boat_tail_length <= 0.0) return 0.0;
     double d_ratio = (params_.body_diameter - params_.base_diameter) / params_.body_diameter;
@@ -156,13 +167,15 @@ double AerodynamicsModel::computeBoatTailDrag(const FlightConditions& /*fc*/) co
     return 2.0 * d_ratio * slope;
 }
 
-// Placeholder -- supersonic-only, never exercised at this vehicle's speeds.
+// Goal: placeholder, supersonic-only physics -- never exercised at this
+// vehicle's actual speeds.
 double AerodynamicsModel::computeWaveDrag(const FlightConditions& fc) const {
     return (fc.mach > 1.0) ? 0.2 : 0.0;
 }
 
-// ---- Assembly ----
-
+// ##### Assembly #####
+// Goal: pull every piece above into the one complete coefficient set
+// AerodynamicsModel actually hands out.
 AerodynamicCoefficients AerodynamicsModel::computeCoefficients(const FlightConditions& fc) const {
     double cn_alpha_body = computeBodyCnAlpha(fc.mach);
     double cn_alpha_fin = computeFinCnAlpha(fc.mach);
@@ -191,9 +204,10 @@ AerodynamicCoefficients AerodynamicsModel::computeCoefficients(const FlightCondi
     return out;
 }
 
-// Barrowman CP is geometry-only in the subsonic regime: both body and fin
-// Cn_alpha pick up the same compressibility factor, which cancels in this
-// ratio -- so it's computed once at Mach 0, not per flight condition.
+// Goal: the Barrowman CP, computed once at Mach 0 rather than per flight
+// condition -- both body and fin Cn_alpha pick up the same
+// compressibility factor, which cancels out of this ratio, so the
+// result doesn't actually depend on Mach.
 double AerodynamicsModel::computeCenterOfPressure() const {
     double cn_body = computeBodyCnAlpha(0.0);
     double cn_fin = computeFinCnAlpha(0.0);

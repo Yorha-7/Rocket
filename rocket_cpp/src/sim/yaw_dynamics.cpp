@@ -3,35 +3,34 @@
 #include <cmath>
 #include <algorithm>
 
-// ============================================================
-// Yaw dynamics: how the rocket swings side to side -- the exact mirror of
-// pitch_dynamics.cpp, one plane over (body Y-Z instead of body X-Z), using
-// sideslip (beta) instead of angle of attack (alpha), and the same
-// Cn_alpha/CP/CG/I_zz an axisymmetric body already shares with pitch
-// (I_zz = I_yy, see MassProperties). Before this existed, yaw only ever
-// held whatever init_yaw set it to -- real weathercocking now gives it
-// the same self-correcting behavior pitch has always had, rather than
-// leaving y-axis steering (e.g. TVC/Navigation) with no vehicle-attitude
-// assist at all.
+// ##### Yaw dynamics, the big picture #####
+// Goal: exact mirror of pitch_dynamics.cpp, one plane over -- body Y-Z
+// instead of body X-Z, sideslip (beta) instead of angle of attack
+// (alpha), same shared Cn_alpha/CP/CG/I_zz (I_zz = I_yy, axisymmetric
+// body). Before this file existed, yaw just held whatever init_yaw set
+// it to for the whole flight -- this gives it the same real
+// weathercocking behavior pitch has always had, so Y-axis steering
+// (TVC/Navigation) gets vehicle-attitude assistance too, not just X.
 //
-// Both angles wrap with fmod rather than clamp -- neither pitch nor yaw
-// is physically bounded to a narrow range (a vehicle can legitimately
-// fly nose-down, inverted, or through any azimuth); pitch used to hard-
-// clamp near +-90 degrees, which turned out to trap it there instead of
-// letting the same restoring torque this file has always used settle it
-// the way yaw does -- see pitch_dynamics.cpp's updatePitchDynamics().
-// ============================================================
+// Both pitch and yaw wrap (fmod) rather than clamp their angle -- neither
+// is physically bounded to a narrow range (a vehicle can legitimately fly
+// nose-down, inverted, or through any azimuth). Pitch used to hard-clamp
+// near +-90 degrees; see pitch_dynamics.cpp's updatePitchDynamics() for
+// why that turned out to be a real problem, not a safe default.
 
-// Always zero, same reasoning as computeGravityTorque: no net torque
+// ##### computeYawGravityTorque() #####
+// Goal: always zero, same reasoning as pitch's version -- no net torque
 // about the CG from a uniform field, regardless of which axis.
 double RocketKinematics::computeYawGravityTorque(const RocketState& state,
                                                  const MassProperties& mp) const {
     return 0.0;
 }
 
-// Air pushing on the CP, offset from the CG, restoring the nose toward
-// the direction of travel in the yaw plane -- same physics as pitch's
-// aero moment, using sideslip (beta) instead of angle of attack (alpha).
+// ##### computeYawAeroMoment() #####
+// Goal: the yaw-plane restoring torque -- air pushing on the CP trying
+// to swing the nose back toward the direction of travel, same physics as
+// pitch's aero moment, just using sideslip (beta) instead of angle of
+// attack (alpha).
 double RocketKinematics::computeYawAeroMoment(const RocketState& state,
                                               const MassProperties& mp) const {
     double v = state.velocity.norm();
@@ -51,8 +50,9 @@ double RocketKinematics::computeYawAeroMoment(const RocketState& state,
     return -0.5 * rho * v * v * Cn_alpha * beta_limited * A * d;
 }
 
-// Resists yaw rotation, proportional to yaw rate -- same weathervane
-// damping as pitch, mirrored to the yaw axis.
+// ##### computeYawDampingTorque() #####
+// Goal: resist whatever yaw rotation is happening, proportional to how
+// fast it's spinning -- same weathervane damping as pitch, mirrored.
 double RocketKinematics::computeYawDampingTorque(const RocketState& state,
                                                  const MassProperties& mp) const {
     double altitude = std::max(0.0, state.position(2));
@@ -73,6 +73,8 @@ double RocketKinematics::computeTotalYawTorque(const RocketState& state,
          + computeYawDampingTorque(state, mp);
 }
 
+// Goal: same Newton's-second-law-for-rotation clamp as pitch, mirrored
+// to the yaw axis.
 double RocketKinematics::computeYawAcceleration(double total_torque,
                                                 const MassProperties& mp) const {
     double alpha = total_torque / mp.I_zz;
@@ -80,10 +82,12 @@ double RocketKinematics::computeYawAcceleration(double total_torque,
     return std::max(-MAX_ALPHA, std::min(MAX_ALPHA, alpha));
 }
 
-// Integrate: torque -> yaw acceleration -> yaw rate -> yaw angle. Rate is
-// clamped the same way pitch's is (numerical safety net); the angle
-// itself just wraps into [0, 2*pi) -- it's a compass azimuth, not a
-// bounded tilt, so there's no ~85 degree ceiling to clamp to.
+// ##### updateYawDynamics() #####
+// Goal: integrate torque -> yaw acceleration -> yaw rate -> yaw angle.
+// Rate is clamped the same numerical-safety way pitch's is; the angle
+// itself just wraps into [0, 2*pi) since it's a compass azimuth, not a
+// bounded tilt -- there's no "past vertical" concept for yaw the way
+// there historically was (wrongly) for pitch.
 void RocketKinematics::updateYawDynamics(RocketState& next, const RocketState& state) const {
     MassProperties mp = mass_model_.computeAt(state.mass);
     mp.cp_location_cm = cp_location_cm_;
@@ -99,9 +103,9 @@ void RocketKinematics::updateYawDynamics(RocketState& next, const RocketState& s
     next.orientation(2) = fmod(state.orientation(2) + next.angular_vel(2) * config_.dt, 2 * M_PI);
 }
 
-// Same mass properties/torque math as updateYawDynamics, but returns the
-// breakdown instead of integrating it -- for logging/plotting, mirroring
-// computePitchTorques().
+// ##### computeYawTorques() #####
+// Goal: same math as updateYawDynamics, but return the breakdown instead
+// of integrating it -- for logging/plotting, mirroring computePitchTorques().
 YawTorques RocketKinematics::computeYawTorques(const RocketState& state) const {
     MassProperties mp = mass_model_.computeAt(state.mass);
     mp.cp_location_cm = cp_location_cm_;

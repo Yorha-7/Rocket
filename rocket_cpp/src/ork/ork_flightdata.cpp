@@ -11,8 +11,10 @@ using tinyxml2::XMLDocument;
 
 namespace {
 
-// Which motor configuration OpenRocket itself considers "the" one, when
-// the caller doesn't ask for a specific motor.
+// ##### XML/CSV helpers #####
+
+// Goal: find which motor configuration OpenRocket itself considers "the"
+// one, when the caller doesn't ask for a specific motor.
 std::string findDefaultMotorConfigId(const XMLElement* rocket) {
     for (const XMLElement* mc = rocket->FirstChildElement("motorconfiguration"); mc;
          mc = mc->NextSiblingElement("motorconfiguration")) {
@@ -26,18 +28,16 @@ std::string findDefaultMotorConfigId(const XMLElement* rocket) {
     throw std::runtime_error("No motor configuration found in .ork file");
 }
 
-// The embedded simulation whose launch conditions were run with the given
-// motor configuration. OpenRocket can save MULTIPLE <simulation> entries
-// for the same config id -- e.g. an old "loaded but never re-run" one
-// left over from before a rocket edit, sitting right next to the current
-// one that's actually been simulated. Picking the first match blindly
-// grabs whichever one happens to come first in the file, data or not; a
-// simulation only being useful here once it actually HAS flight data
-// (<flightdata><databranch>) is the real criterion, not just "first name
-// match". Falls back to the first match with no data if none have any,
-// so a genuinely never-simulated file still fails with the same honest
-// "no flight data" error as before -- this only changes behavior when a
-// good one actually exists among several candidates.
+// Goal: find the embedded simulation that was run with the given motor
+// config -- and specifically, the one that actually HAS flight data.
+// An .ork can save MULTIPLE <simulation> entries for the same config id
+// (e.g. an old "loaded but never re-run" one left over from before an
+// edit, sitting right next to the current, actually-simulated one).
+// Picking the first name match blindly can grab an empty one; this walks
+// every match and prefers the first one with real
+// <flightdata><databranch> content, falling back to the first match with
+// no data if none have any (so a genuinely never-simulated file still
+// fails with the same honest "no flight data" error as before).
 const XMLElement* findSimulationForConfig(const XMLElement* root, const std::string& configid) {
     const XMLElement* simulations = root->FirstChildElement("simulations");
     if (!simulations) return nullptr;
@@ -68,8 +68,8 @@ std::vector<std::string> splitCsv(const std::string& line) {
     return tokens;
 }
 
-// Same "search the header text for this label" approach the old CSV
-// loader used to find columns by name instead of a fixed index.
+// Goal: find a column by NAME in the header row instead of a fixed
+// index -- OpenRocket's own column order can vary between exports.
 int columnIndex(const std::vector<std::string>& columns, const std::string& label) {
     for (size_t i = 0; i < columns.size(); ++i) {
         if (columns[i] == label) return static_cast<int>(i);
@@ -77,8 +77,9 @@ int columnIndex(const std::vector<std::string>& columns, const std::string& labe
     return -1;
 }
 
-// NaN shows up for columns that don't apply yet (e.g. CP location before
-// the rocket has any airspeed) — treated as "unknown", not a real zero.
+// Goal: parse a CSV field as a double, treating NaN (columns that don't
+// apply yet, e.g. CP location before the rocket has any airspeed) and
+// any unparseable value as "unknown" (0.0), not letting either crash the load.
 double toDoubleOrZero(const std::string& s) {
     try {
         double v = std::stod(s);
@@ -88,8 +89,8 @@ double toDoubleOrZero(const std::string& s) {
     }
 }
 
-// Nearest-neighbor resample onto a uniform dt grid, same approach the
-// original CSV loader used.
+// Goal: resample OpenRocket's own (unevenly-spaced) data points onto our
+// own uniform dt grid, nearest-neighbor.
 std::vector<double> resample(const std::vector<double>& raw_time,
                              const std::vector<double>& raw_values,
                              const std::vector<double>& grid_time) {
@@ -114,6 +115,12 @@ std::vector<double> resample(const std::vector<double>& raw_time,
 
 }  // namespace
 
+// ##### parseOrkFlightData() #####
+// Goal: locate the right embedded simulation, pull out its Time/Thrust/
+// Mass columns, and resample them onto a uniform dt grid -- the ONLY
+// thing this codebase still reads from OpenRocket's own simulation
+// (Cd/CP/CG/inertia are computed independently by AerodynamicsModel/
+// VehicleMassModel from the vehicle's own geometry instead).
 FlightData parseOrkFlightData(const std::string& xml, double dt,
                               const std::string& motor_configid) {
     XMLDocument doc;
@@ -135,11 +142,6 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
     const char* types_attr = databranch ? databranch->Attribute("types") : nullptr;
     if (!types_attr) throw std::runtime_error("Simulation has no flight data to read");
 
-    // Thrust and mass are motor performance data -- the one thing we still
-    // read from OpenRocket's simulation, since there's no local motor
-    // database to derive a thrust curve from independently. Cd/CP/CG/
-    // inertia are no longer read here at all; AerodynamicsModel and
-    // VehicleMassModel compute those from the vehicle's own geometry.
     std::vector<std::string> columns = splitCsv(types_attr);
     int time_col = columnIndex(columns, "Time");
     int thrust_col = columnIndex(columns, "Thrust");
@@ -149,6 +151,8 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
         throw std::runtime_error("Flight data is missing an expected column");
     }
 
+    // Goal: read every raw (unevenly-spaced) datapoint row into three
+    // parallel arrays.
     std::vector<double> raw_time, raw_thrust, raw_mass_g;
 
     for (const XMLElement* dp = databranch->FirstChildElement("datapoint"); dp;
@@ -166,6 +170,8 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
 
     if (raw_time.empty()) throw std::runtime_error("Simulation has no flight data points");
 
+    // Goal: build the uniform dt grid this whole sim runs on, then
+    // resample thrust/mass onto it.
     FlightData data;
     double t_start = raw_time.front();
     double t_end = raw_time.back();
@@ -176,6 +182,10 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
     data.thrust = resample(raw_time, raw_thrust, data.time);
     data.mass = resample(raw_time, raw_mass_g, data.time);
 
+    // Goal: find the mass at the LAST instant the motor was still
+    // producing real thrust -- that's the vehicle's true dry mass, not
+    // just the raw data's final sample (which could include post-flight
+    // artifacts).
     double dry_mass = raw_mass_g.back();
     for (int i = (int)raw_thrust.size() - 1; i >= 0; --i) {
         if (raw_thrust[i] > 0.001) {
@@ -188,6 +198,9 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
     return data;
 }
 
+// ##### parseOrkLaunchConditions() #####
+// Goal: read the pad height and initial launch-rod tilt OpenRocket used
+// for this same simulation, so the sim's own launch setup matches.
 SimulationConfig parseOrkLaunchConditions(const std::string& xml, const std::string& motor_configid) {
     XMLDocument doc;
     if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) {
