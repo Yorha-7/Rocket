@@ -1,4 +1,0 @@
-/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles/rocket_cpp.dir
-/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles/pid_ga_tuner.dir
-/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles/edit_cache.dir
-/media/jayesh/Acer/Users/scien/Rocket/rocket_cpp/build/CMakeFiles/rebuild_cache.dir
