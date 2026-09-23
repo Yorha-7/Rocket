@@ -406,9 +406,12 @@ full, current list, kept up to date as things change.
   running log of bugs found and fixed along the way.
 - **[`rocket_cpp/docs/axis_and_tvc_reference.png`](./rocket_cpp/docs/axis_and_tvc_reference.png)**
   — the coordinate-frame and gimbal-geometry diagram referenced above.
-- Source is organized exactly along the three-module split described
+- Source is organized along the three-module split described
   above — `rocket_cpp/include/{sim,ork,gnc}/` and
-  `rocket_cpp/src/{sim,ork,gnc}/`.
+  `rocket_cpp/src/{sim,ork,gnc}/`. The thin executable wrapper lives in
+  `rocket_cpp/src/main.cpp`; the single-flight orchestration and TVC test
+  sequence loader live in `rocket_cpp/src/simulation_runner.cpp` with its
+  public declaration in `rocket_cpp/include/simulation_runner.hpp`.
 
 ## Appendix A — Glossary
 
@@ -450,6 +453,8 @@ Rocket/
 ├── rocket_cpp/          the simulation engine (see its own README.md)
 │   ├── include/{sim,ork,gnc}/    headers, one folder per module
 │   ├── src/{sim,ork,gnc}/        implementation, mirrors include/
+│   ├── src/main.cpp              thin CLI/exception-handling entry point
+│   ├── src/simulation_runner.cpp single-flight orchestration
 │   ├── scripts/                  Python plotting (trajectory, TVC, forces)
 │   ├── docs/                     reference diagrams
 │   └── data/                     TVC test sequences, sample inputs
