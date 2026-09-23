@@ -23,6 +23,7 @@ is a full glossary you can jump to any time something's unclear.
 - [What one simulated flight actually does](#what-one-simulated-flight-actually-does)
 - [The hardware side](#the-hardware-side)
 - [Getting started](#getting-started)
+- [Interception analysis](#interception-analysis)
 - [Honest limitations](#honest-limitations)
 - [Where to go deeper](#where-to-go-deeper)
 - [Appendix A — Glossary](#appendix-a--glossary)
@@ -315,6 +316,45 @@ they all stay in sync with whatever flight was simulated last:
 | `scripts/tvc.py` | The commanded gimbal angle over time, pitch and yaw axes on separate panels — what the nozzle actually did, lag included. | `python3 scripts/tvc.py rocket_trajectory.csv` |
 | `scripts/x_force.py` | The net world-frame X-force over time (thrust + drag; gravity has no X-component) — useful for seeing exactly when the motor burns out. | `python3 scripts/x_force.py rocket_trajectory.csv` |
 | `scripts/make_axis_diagram.py` | Regenerates the coordinate-frame/TVC reference diagram used above — a docs utility, not a per-flight plot. | `python3 scripts/make_axis_diagram.py` |
+
+
+## Interception analysis
+
+The active-guidance result is evaluated with a batch interception sweep, not
+just one hand-picked trajectory. The sweep samples static targets in the
+valid upper hemisphere of a 500 m sphere around the launch point, then records
+the rocket's minimum 3D distance to each target. Closest approach is linearly
+interpolated between simulation samples so the result is not tied to one
+discrete timestep.
+
+The latest full-fidelity terminal-guidance sweep uses 16 radial shells and 96
+directions per shell, producing 1,434 valid target cases:
+
+| Metric | Result |
+|---|---:|
+| Median miss distance | 6.185 m |
+| Within 5 m | 606 / 1,434 |
+| Within 10 m | 792 / 1,434 |
+| Within 25 m | 980 / 1,434 |
+| Worst miss distance | 144.068 m |
+
+For comparison, the original waypoint/PID guidance had a 129.3 m median miss
+over the same target set. The remaining large misses are concentrated in
+far-lateral, very-low-altitude targets where the TVC reaches its 30° travel
+limit before the vehicle can build enough lateral velocity.
+
+![Dense terminal-guidance interception sweep](./rocket_cpp/results/plots/interception_results_terminal_dense_full.png)
+
+The data behind this figure is
+[interception_results_terminal_dense_full.csv](./rocket_cpp/results/csv/interception_results_terminal_dense_full.csv).
+To regenerate the plot after a new sweep:
+
+```bash
+cd rocket_cpp
+./build/interception_sweep --full --terminal \
+  --output results/csv/interception_results_terminal_dense_full.csv
+python3 scripts/plot_interception_sweep.py
+```
 
 ## Honest limitations
 

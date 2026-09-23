@@ -21,6 +21,8 @@ CliArgs parseArgs(int argc, char** argv) {
             args.preview = true;
         } else if (flag == "--no-plot") {
             args.no_plot = true;
+        } else if (flag == "--terminal") {
+            args.terminal_interception = true;
         }
     }
     return args;

@@ -141,10 +141,16 @@ int runSimulation(const CliArgs& args) {
     // Goal: fix the guidance target for this run -- settable via
     // --target, no mission-planning input beyond a single fixed point yet.
     const Eigen::Vector3d NAV_TARGET(args.target_x, args.target_y, args.target_z);
-    navigation::Navigation navigation(NAV_TARGET, config.dt);
+    navigation::Navigation navigation(
+        NAV_TARGET, config.dt, 2.7176, 1.8196, 0.0745,
+        args.terminal_interception);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
               << ", " << NAV_TARGET.z() << ") m across " << navigation.waypointCount()
-              << " waypoint(s) -- guidance law: point the nose at each in turn, TVC does the rest\n";
+              << " waypoint(s) -- guidance law: "
+              << (args.terminal_interception
+                      ? "terminal velocity-to-go interception"
+                      : "waypoint PID")
+              << "\n";
 
     auto states = sim.simulate(config.sim_duration, flight_data, {}, &navigation);
 

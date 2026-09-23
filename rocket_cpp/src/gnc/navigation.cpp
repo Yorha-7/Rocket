@@ -11,8 +11,10 @@ namespace navigation {
 // straight-line waypoint list, and start the per-tick controller aimed
 // at the first one.
 Navigation::Navigation(const Eigen::Vector3d& final_target, double dt,
-                       double kp, double ki, double kd)
-    : step_(Eigen::Vector3d::Zero(), dt, kp, ki, kd) {
+                       double kp, double ki, double kd,
+                       bool terminal_interception)
+    : terminal_interception_(terminal_interception),
+      step_(Eigen::Vector3d::Zero(), dt, kp, ki, kd, terminal_interception) {
     if (final_target.z() <= MIN_TARGET_ALTITUDE_M) {
         throw std::invalid_argument(
             "Navigation target is on/near the ground (z=" + std::to_string(final_target.z()) +
@@ -33,7 +35,10 @@ Navigation::Navigation(const Eigen::Vector3d& final_target, double dt,
     }
     waypoints_.push_back(final_target);
 
-    step_.setTarget(waypoints_[current_waypoint_idx_]);
+    // Terminal mode aims at the actual target from the first tick;
+    // waypoint mode retains the existing short-hop behavior.
+    step_.setTarget(terminal_interception_ ? final_target
+                                           : waypoints_[current_waypoint_idx_]);
 }
 
 // ##### computeTvcTarget() #####
@@ -43,6 +48,8 @@ Navigation::Navigation(const Eigen::Vector3d& final_target, double dt,
 // NavigationStep and isn't duplicated here.
 Eigen::Vector3d Navigation::computeTvcTarget(const sensors::Gps& gps, const sensors::Gyro& gyro, double dt) {
     Eigen::Vector3d tvc_target = step_.computeTvcTarget(gps, gyro, dt);
+
+    if (terminal_interception_) return tvc_target;
 
     bool on_last_waypoint = (current_waypoint_idx_ + 1 == waypoints_.size());
     if (!on_last_waypoint) {

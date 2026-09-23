@@ -53,7 +53,8 @@ public:
     // estimatePosition()). Gains default to this project's own GA-tuned
     // values (src/tuning/); a caller can still override them.
     NavigationStep(const Eigen::Vector3d& target_position, double dt,
-                   double kp = 2.7176, double ki = 1.8196, double kd = 0.0745);
+                   double kp = 2.7176, double ki = 1.8196, double kd = 0.0745,
+                   bool terminal_interception = false);
 
     // Goal: retarget this controller -- Navigation calls this when it
     // advances to the next waypoint. No validation: waypoints are
@@ -133,6 +134,11 @@ private:
     // Integral accumulators, one per axis -- real memory between calls.
     double integral_pitch_ = 0.0;
     double integral_yaw_ = 0.0;
+
+    // Terminal mode uses target-relative velocity-to-go guidance instead
+    // of walking the short-hop waypoint PID. It is opt-in so existing
+    // single-flight behavior remains unchanged.
+    bool terminal_interception_ = false;
 };
 
 // ##### Navigation #####
@@ -151,7 +157,8 @@ public:
     // NavigationStep unchanged; a caller that omits them gets today's
     // tuned defaults.
     Navigation(const Eigen::Vector3d& final_target, double dt,
-               double kp = 2.7176, double ki = 1.8196, double kd = 0.0745);
+               double kp = 2.7176, double ki = 1.8196, double kd = 0.0745,
+               bool terminal_interception = false);
 
     // Goal: the one call site RocketKinematics::simulate() uses --
     // drives the current waypoint's NavigationStep, then advances to the
@@ -177,6 +184,7 @@ private:
 
     std::vector<Eigen::Vector3d> waypoints_;
     size_t current_waypoint_idx_ = 0;
+    bool terminal_interception_ = false;
     NavigationStep step_;
 
     // Goal: the path's own straight-line direction, set once at
