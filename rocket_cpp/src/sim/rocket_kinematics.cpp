@@ -175,7 +175,7 @@ RocketState RocketKinematics::step(const RocketState& state, double thrust,
 // a live guidance decision from Navigation each step.
 std::vector<RocketState> RocketKinematics::simulate(double time, const FlightData& flight_data,
                                                     const std::vector<Eigen::Vector3d>& tvc_targets,
-                                                    Navigation* navigation) {
+                                                    navigation::Navigation* navigation) {
     // Goal: size the loop from the requested flight time alone -- NOT
     // clamped to flight_data's own length. That array only covers
     // however long OpenRocket's own (unguided) simulation happened to

@@ -45,7 +45,7 @@ public:
     // guidance law chose the direction it was given.
     std::vector<RocketState> simulate(double time, const FlightData& flight_data,
                                        const std::vector<Eigen::Vector3d>& tvc_targets = {},
-                                       Navigation* navigation = nullptr);
+                                       navigation::Navigation* navigation = nullptr);
 
     // Goal: hand back read-only views of this run's own settings --
     // callers can inspect them but never accidentally mutate them
