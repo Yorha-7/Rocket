@@ -56,7 +56,9 @@ set(ROCKET_CORE_SOURCES
 
 add_executable(rocket_cpp
     src/main.cpp
+    src/simulation_runner.cpp
     src/cli_args.cpp
+    include/simulation_runner.hpp
     include/cli_args.hpp
     ${ROCKET_CORE_SOURCES}
 )

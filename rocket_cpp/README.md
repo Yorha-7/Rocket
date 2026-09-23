@@ -37,6 +37,22 @@ interactive 3D viewer (`scripts/trajectory.py`) is also available on demand.
 > is wired into the build. See [Staging Notes](#staging-notes) before
 > trusting a header at face value.
 
+## Application entry points
+
+The executable wrapper is intentionally thin:
+
+- `src/main.cpp` parses command-line arguments, catches top-level
+  exceptions, and delegates to `runSimulation()`.
+- `src/simulation_runner.cpp` contains the complete single-flight
+  orchestration, including OpenRocket loading, diagnostics, CSV/plot output,
+  and the `loadTvcTestSequence()` helper.
+- `include/simulation_runner.hpp` exposes those two application-level
+  functions without coupling the reusable `sim/`, `ork/`, or `gnc/` modules
+  to `main.cpp`.
+
+This keeps process-level concerns separate from the physics/GNC library and
+makes the simulation runner callable from another entry point later.
+
 ## Kinematics library tree
 
 One class, split across a few `.cpp` files by responsibility (each under
@@ -343,7 +359,7 @@ rocket_cpp/
 
 | Function | Purpose |
 |---|---|
-| `loadOrkRocket(path, dt, motor?)` | **entry point** — `main.cpp` calls only this one |
+| `loadOrkRocket(path, dt, motor?)` | **entry point** — `simulation_runner.cpp` calls only this one |
 | `readOrkXml(path)` | unzip `.ork` → design XML string |
 | `parseOrkGeometry(xml)` | XML → `RocketParams` (nose/body/fin geometry) |
 | `parseOrkFlightData(xml, dt, motor?)` | XML → `FlightData` (thrust, mass). Throws `std::runtime_error` if the matched `<simulation>` has no `<databranch>` at all — meaning that design was never actually run inside OpenRocket before saving; open it there, run the simulation, and re-save before pointing this loader at it. |
