@@ -12,8 +12,10 @@ namespace navigation {
 // to Navigation's constructor (see navigation.hpp class comment); this
 // class trusts whatever target it's given.
 NavigationStep::NavigationStep(const Eigen::Vector3d& target_position, double dt,
-                               double kp, double ki, double kd)
-    : kp_(kp), ki_(ki), kd_(kd), target_position_(target_position) {
+                               double kp, double ki, double kd,
+                               bool terminal_interception)
+    : kp_(kp), ki_(ki), kd_(kd), target_position_(target_position),
+      terminal_interception_(terminal_interception) {
     computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_HORIZONTAL_SIGMA_M, dt, horizontal_alpha_, horizontal_beta_);
     computeAlphaBeta(ACCEL_NOISE_STD_MPS2, GPS_VERTICAL_SIGMA_M, dt, vertical_alpha_, vertical_beta_);
 }
@@ -106,6 +108,39 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
         integral_pitch_ = 0.0;
         integral_yaw_ = 0.0;
         return Eigen::Vector3d(0, 0, 1);
+    }
+
+    // Terminal interception mode uses a target-relative velocity-to-go
+    // law. The desired speed grows with range but is capped, then the
+    // velocity error supplies braking as the vehicle closes on the
+    // stationary target. Adding gravity compensation makes the returned
+    // direction a FORCE direction rather than merely a geometric LOS.
+    if (terminal_interception_) {
+        Eigen::Vector3d to_target_world = target_position_ - position;
+        const double distance = to_target_world.norm();
+        if (distance < 1e-6) return Eigen::Vector3d(0, 0, 1);
+
+        const Eigen::Vector3d line_of_sight = to_target_world / distance;
+        constexpr double MAX_TERMINAL_SPEED_MPS = 120.0;
+        constexpr double BRAKING_ACCEL_MPS2 = 30.0;
+        constexpr double VELOCITY_GAIN_PER_S = 1.5;
+        const double desired_speed = std::min(
+            MAX_TERMINAL_SPEED_MPS,
+            std::sqrt(2.0 * BRAKING_ACCEL_MPS2 * distance));
+        const Eigen::Vector3d desired_velocity = desired_speed * line_of_sight;
+
+        // Target is static in this first interceptor. fused_velocity_ is
+        // the same GPS/accelerometer estimate used by the normal mode.
+        Eigen::Vector3d acceleration_command =
+            VELOCITY_GAIN_PER_S * (desired_velocity - fused_velocity_);
+
+        // The dynamics apply gravity after thrust. Request the thrust
+        // force that would produce acceleration_command in world axes.
+        acceleration_command += Eigen::Vector3d(0.0, 0.0, 9.80665);
+
+        Eigen::Vector3d force_body = R.transpose() * acceleration_command;
+        if (force_body.norm() < 1e-9) return Eigen::Vector3d(0, 0, 1);
+        return force_body.normalized();
     }
 
     // Goal: get the straight-line vector from here to the current

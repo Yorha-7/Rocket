@@ -79,7 +79,18 @@ add_executable(pid_ga_tuner
     ${ROCKET_CORE_SOURCES}
 )
 
-foreach(target rocket_cpp pid_ga_tuner)
+# Goal: run a deterministic batch of target points through the same
+# physics/GNC stack and write one closest-approach result per target.
+# This stays a separate executable so normal single-flight runs keep
+# their existing CLI and output behavior.
+add_executable(interception_sweep
+    src/analysis/interception_sweep.cpp
+    src/cli_args.cpp
+    include/cli_args.hpp
+    ${ROCKET_CORE_SOURCES}
+)
+
+foreach(target rocket_cpp pid_ga_tuner interception_sweep)
     target_include_directories(${target} PRIVATE include)
     target_link_libraries(${target} PRIVATE
         Eigen3::Eigen

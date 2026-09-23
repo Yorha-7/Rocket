@@ -17,6 +17,7 @@ struct CliArgs {
     double init_yaw_deg = 10.0;
     bool preview = false;  // faster/coarser: bigger dt, shorter duration cap -- see main.cpp
     bool no_plot = false;  // skip main.cpp's system("python3 scripts/plot_trajectory.py ...") call
+    bool terminal_interception = false;  // opt into target-relative terminal guidance
 };
 
 CliArgs parseArgs(int argc, char** argv);
