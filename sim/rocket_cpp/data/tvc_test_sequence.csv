@@ -1,0 +1,24 @@
+# TVC test sequence -- constant max-deflection-north test for validating
+# ThrustVectorControl's actual contribution to the trajectory.
+#
+# Each row is a time segment: from t_start_s (inclusive) to t_end_s
+# (exclusive), command ThrustVectorControl::commandForceDirection() with
+# (target_x, target_y, target_z) every step, then call step(dt) as usual.
+#
+# Only one segment, held constant for the entire simulated flight: no
+# doublet, no cancellation, nothing to muddy attribution. target_y=0 keeps
+# the yaw actuator at neutral the whole time -- x is North per the README
+# ("x -- North-ish horizontal"), so this is pure pitch-plane deflection,
+# nothing steering toward/away from East.
+#
+# target=(1,0,1) implies an off-axis angle of 45deg, far past
+# MAX_GIMBAL_DEG=12 in thrust_vector_control.hpp -- commandForceDirection()
+# clamps that down, so the pitch actuator saturates at exactly its +/-12deg
+# physical limit (in the direction that pushes force toward +X/north) for
+# the ENTIRE burn, not just a brief kick. If TVC is doing anything at all,
+# this is the largest, most unambiguous northward push the current
+# actuator model can produce -- x-position should visibly diverge from a
+# straight-up baseline run.
+#
+# t_start_s,t_end_s,target_x,target_y,target_z,note
+0.0,120.0,1.0,0.0,1.0,constant max pitch-plane deflection toward +X (north) - held for the whole flight

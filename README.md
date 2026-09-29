@@ -1,12 +1,12 @@
 # Rocket — a from-scratch simulator for actively-guided model rockets
 
-<img src="./artifacts/rocket_flight.gif" alt="Simulated rocket flight" width="480">
+<img src="./sim/artifacts/rocket_flight.gif" alt="Simulated rocket flight" width="480">
 
 This repo is one project told in three layers: a **physics simulation** that
 predicts how a rocket actually flies, a **flight-computer stack** (sensors +
 guidance + a gimbaled nozzle) that steers it, and the **hardware** (PCB,
 motor, airframe) that would eventually fly for real. The simulation
-(`rocket_cpp/`) is the part that's actually working today and the focus of
+(`sim/rocket_cpp/`) is the part that's actually working today and the focus of
 this document.
 
 If you don't have an aerospace background, that's fine — every technical
@@ -55,14 +55,14 @@ for what it's actually good at:
   to reinvent rocket CAD.
 - **Everything downstream of that** — reading the design back out,
   computing how it actually flies, and closing the steering loop — is a
-  custom C++ simulator (`rocket_cpp/`), built from scratch, because that
+  custom C++ simulator (`sim/rocket_cpp/`), built from scratch, because that
   piece genuinely didn't exist anywhere else.
 
 ## The big picture
 
 The simulator is organized into three modules that mirror three physically
-distinct jobs. Each one lives in its own folder under `rocket_cpp/include/`
-and `rocket_cpp/src/`:
+distinct jobs. Each one lives in its own folder under `sim/rocket_cpp/include/`
+and `sim/rocket_cpp/src/`:
 
 ```mermaid
 flowchart LR
@@ -187,7 +187,7 @@ Thrust and drag are computed in the body frame (they naturally act along
 and against the vehicle's own axes) and then rotated into the world frame
 to actually move the rocket through space.
 
-<img src="./rocket_cpp/docs/axis_and_tvc_reference.png" alt="Axis and TVC reference diagram" width="600">
+<img src="./sim/rocket_cpp/docs/axis_and_tvc_reference.png" alt="Axis and TVC reference diagram" width="600">
 
 ## Stage 3 — `gnc/`: sensors, guidance, and the gimbal
 
@@ -223,7 +223,7 @@ the gimbal actuator (next paragraph) already has its own built-in damping
 from its physical lag, so an extra derivative term on top of it just
 fought the correction instead of smoothing it. That's a real finding from
 testing this specific vehicle, not a rule that holds for every control
-system — see [`rocket_cpp/include/gnc/navigation.hpp`](./rocket_cpp/include/gnc/navigation.hpp)
+system — see [`sim/rocket_cpp/include/gnc/navigation.hpp`](./sim/rocket_cpp/include/gnc/navigation.hpp)
 for the actual numbers. Navigation also deliberately stays off below a
 minimum altitude — right off the pad, a tiny angle error would otherwise
 translate into a full steering command at the worst possible moment.
@@ -235,13 +235,13 @@ above) one waypoint at a time. The reason: a target close to the pad and
 one far downrange ask the same fixed gain set for very different
 maneuvers, so instead of retuning per-target, the planner makes every
 step look like the same kind of local steering problem — see
-[`rocket_cpp/include/gnc/navigation.hpp`](./rocket_cpp/include/gnc/navigation.hpp).
-`rocket_cpp/src/tuning/` is a separate, offline tool (`pid_ga_tuner`) that
+[`sim/rocket_cpp/include/gnc/navigation.hpp`](./sim/rocket_cpp/include/gnc/navigation.hpp).
+`sim/rocket_cpp/src/tuning/` is a separate, offline tool (`pid_ga_tuner`) that
 searches for a better (Kp, Ki, Kd) triple than manual tuning found — three
 binary-encoded genetic algorithms, one per gain, run concurrently and
 coordinating through a shared live "current best" value rather than each
 working in isolation. See
-[`rocket_cpp/README.md`](./rocket_cpp/README.md#tuning-navigationsteps-gains-with-a-genetic-algorithm)
+[`sim/rocket_cpp/README.md`](./sim/rocket_cpp/README.md#tuning-navigationsteps-gains-with-a-genetic-algorithm)
 for the full design.
 
 **ThrustVectorControl (TVC)** — the actuator model for the nozzle itself.
@@ -273,7 +273,7 @@ integrator's time step:
 The result is written to a CSV and plotted — a full 3D trajectory, forces
 over time, and the commanded vs. actual gimbal angle history:
 
-<img src="./rocket_cpp/rocket_trajectory.png" alt="Example simulated trajectory" width="600">
+<img src="./sim/rocket_cpp/rocket_trajectory.png" alt="Example simulated trajectory" width="600">
 
 ## The hardware side
 
@@ -285,15 +285,15 @@ and gimbal actuator this simulation's `gnc/` layer is modeling:
 <img src="./artifacts/PCB_3D.png" alt="Flight computer PCB, 3D render" width="420">
 
 An earlier prototype of the trajectory math (before the C++ rewrite) was
-built in MATLAB/Simulink — kept in `simulink/`/`matlab/` for history, but
-superseded by `rocket_cpp/`, which is now the actively developed
+built in MATLAB/Simulink — kept in `sim/simulink/` and `sim/matlab/` for history, but
+superseded by `sim/rocket_cpp/`, which is now the actively developed
 simulation:
 
-<img src="./artifacts/rocket_simulink_diag.png" alt="Early Simulink prototype" width="480">
+<img src="./sim/artifacts/rocket_simulink_diag.png" alt="Early Simulink prototype" width="480">
 
 ## Getting started
 
-The simulator is a standard CMake C++ project. From `rocket_cpp/`:
+The simulator is a standard CMake C++ project. From `sim/rocket_cpp/`:
 
 ```bash
 cmake -S . -B build
@@ -301,9 +301,9 @@ cmake --build build
 ./build/rocket_cpp
 ```
 
-This loads `artifacts/rocket.ork`, runs a full guided flight, and writes
+This loads `sim/data/rocket.ork`, runs a full guided flight, and writes
 `rocket_trajectory.csv` plus plots. See
-**[`rocket_cpp/README.md`](./rocket_cpp/README.md)** for the full build
+**[`sim/rocket_cpp/README.md`](./sim/rocket_cpp/README.md)** for the full build
 prerequisites and how to point it at a different `.ork`/target.
 
 Every plotting script reads from that same `rocket_trajectory.csv`, so
@@ -343,14 +343,14 @@ over the same target set. The remaining large misses are concentrated in
 far-lateral, very-low-altitude targets where the TVC reaches its 30° travel
 limit before the vehicle can build enough lateral velocity.
 
-![Dense terminal-guidance interception sweep](./rocket_cpp/results/plots/interception_results_terminal_dense_full.png)
+![Dense terminal-guidance interception sweep](./sim/rocket_cpp/results/plots/interception_results_terminal_dense_full.png)
 
 The data behind this figure is
-[interception_results_terminal_dense_full.csv](./rocket_cpp/results/csv/interception_results_terminal_dense_full.csv).
+[interception_results_terminal_dense_full.csv](./sim/rocket_cpp/results/csv/interception_results_terminal_dense_full.csv).
 To regenerate the plot after a new sweep:
 
 ```bash
-cd rocket_cpp
+cd sim/rocket_cpp
 ./build/interception_sweep --full --terminal \
   --output results/csv/interception_results_terminal_dense_full.csv
 python3 scripts/plot_interception_sweep.py
@@ -368,7 +368,7 @@ Worth knowing before trusting any number out of it:
   *both* pitch and yaw deflected at once, while forward (X-direction)
   steering only needs one — so the vehicle can push harder in some
   directions than others for the same actuator effort. Documented in
-  detail in `rocket_cpp/README.md`'s Staging Notes.
+  detail in `sim/rocket_cpp/README.md`'s Staging Notes.
   Structural, not a bug to be patched.
 - **Yaw is under-damped** relative to pitch in the current tuning — a
   real, quantified finding, also documented in the Staging Notes.
@@ -391,27 +391,27 @@ Worth knowing before trusting any number out of it:
   *average* accuracy, because no amount of filtering can reject a
   persistent bias in the only absolute-position sensor available. That's
   the same limitation every real GPS-only guided system has without a
-  second independent sensor backing it up — see `rocket_cpp/README.md`'s
+  second independent sensor backing it up — see `sim/rocket_cpp/README.md`'s
   Staging Notes for the full writeup.
 
 None of these are hidden — see
-**[`rocket_cpp/README.md`](./rocket_cpp/README.md#staging-notes)** for the
+**[`sim/rocket_cpp/README.md`](./sim/rocket_cpp/README.md#staging-notes)** for the
 full, current list, kept up to date as things change.
 
 ## Where to go deeper
 
-- **[`rocket_cpp/README.md`](./rocket_cpp/README.md)** — the full
+- **[`sim/rocket_cpp/README.md`](./sim/rocket_cpp/README.md)** — the full
   technical reference: every class and method, the exact math behind each
   physics model, coordinate-frame conventions, build instructions, and a
   running log of bugs found and fixed along the way.
-- **[`rocket_cpp/docs/axis_and_tvc_reference.png`](./rocket_cpp/docs/axis_and_tvc_reference.png)**
+- **[`sim/rocket_cpp/docs/axis_and_tvc_reference.png`](./sim/rocket_cpp/docs/axis_and_tvc_reference.png)**
   — the coordinate-frame and gimbal-geometry diagram referenced above.
 - Source is organized along the three-module split described
-  above — `rocket_cpp/include/{sim,ork,gnc}/` and
-  `rocket_cpp/src/{sim,ork,gnc}/`. The thin executable wrapper lives in
-  `rocket_cpp/src/main.cpp`; the single-flight orchestration and TVC test
-  sequence loader live in `rocket_cpp/src/simulation_runner.cpp` with its
-  public declaration in `rocket_cpp/include/simulation_runner.hpp`.
+  above — `sim/rocket_cpp/include/{sim,ork,gnc}/` and
+  `sim/rocket_cpp/src/{sim,ork,gnc}/`. The thin executable wrapper lives in
+  `sim/rocket_cpp/src/main.cpp`; the single-flight orchestration and TVC test
+  sequence loader live in `sim/rocket_cpp/src/simulation_runner.cpp` with its
+  public declaration in `sim/rocket_cpp/include/simulation_runner.hpp`.
 
 ## Appendix A — Glossary
 
@@ -450,16 +450,17 @@ Terms used throughout this document and the codebase, in plain language.
 
 ```
 Rocket/
-├── rocket_cpp/          the simulation engine (see its own README.md)
-│   ├── include/{sim,ork,gnc}/    headers, one folder per module
-│   ├── src/{sim,ork,gnc}/        implementation, mirrors include/
-│   ├── src/main.cpp              thin CLI/exception-handling entry point
-│   ├── src/simulation_runner.cpp single-flight orchestration
-│   ├── scripts/                  Python plotting (trajectory, TVC, forces)
-│   ├── docs/                     reference diagrams
-│   └── data/                     TVC test sequences, sample inputs
-├── artifacts/            .ork design file, PCB renders, reference media
+├── sim/                 all simulation-only code, models, data, and docs
+│   ├── rocket_cpp/      active simulation engine (see its own README.md)
+│   │   ├── include/{sim,ork,gnc}/ headers, one folder per module
+│   │   ├── src/{sim,ork,gnc}/     implementation, mirrors include/
+│   │   ├── scripts/               Python plotting and analysis
+│   │   └── data/                  TVC test sequences
+│   ├── data/            shared OpenRocket and motor inputs
+│   ├── simulink/        early Simulink prototype
+│   ├── matlab/          early MATLAB support files
+│   └── docs/            generated simulator manuals
+├── artifacts/            hardware renders and component references
 ├── kiCAD/                flight-computer PCB design source
-├── simulink/, matlab/    early prototype (superseded by rocket_cpp/)
-└── data/                 shared input data (OpenRocket/motor exports)
+└── README.md              whole-project overview
 ```
