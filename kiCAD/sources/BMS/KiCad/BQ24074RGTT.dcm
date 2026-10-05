@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP BQ24074RGTT
+D USB-Friendly Li-Ion Battery Charger and Power-Path Management IC, 10.5V OVP
+K
+F http://www.ti.com/lit/gpn/bq24074
+$ENDCMP
+#
+#End Doc Library

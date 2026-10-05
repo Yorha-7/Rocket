@@ -1,0 +1,37 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model 104031-0811
+#/276500/2011450/2.50/14/4/Connector
+DEF 104031-0811 J 0 30 Y Y 1 F N
+F0 "J" 1150 300 50 H V L CNN
+F1 "104031-0811" 1150 200 50 H V L CNN
+F2 "1040310811" 1150 100 50 H I L CNN
+F3 "http://www.molex.com/webdocs/datasheets/pdf/en-us/1040310811_MEMORY_CARD_SOCKET.pdf" 1150 0 50 H I L CNN
+F4 "microSD 1.10mm SMT push-pull memory card microSD 1.10mm SMT push-pull memory card" 1150 -100 50 H I L CNN "Description"
+F5 "1.42" 1150 -200 50 H I L CNN "Height"
+F6 "Molex" 1150 -300 50 H I L CNN "Manufacturer_Name"
+F7 "104031-0811" 1150 -400 50 H I L CNN "Manufacturer_Part_Number"
+F8 "538-104031-0811" 1150 -500 50 H I L CNN "Mouser Part Number"
+F9 "https://www.mouser.co.uk/ProductDetail/Molex/104031-0811?qs=udsGRKD4nA3Tvy7wqky%252BuA%3D%3D" 1150 -600 50 H I L CNN "Mouser Price/Stock"
+F10 "" 1150 -700 50 H I L CNN "Arrow Part Number"
+F11 "" 1150 -800 50 H I L CNN "Arrow Price/Stock"
+DRAW
+X DAT2 1 0 0 200 R 50 50 0 0 P
+X CD/DAT3 2 0 -100 200 R 50 50 0 0 P
+X CMD 3 0 -200 200 R 50 50 0 0 P
+X VDD 4 0 -300 200 R 50 50 0 0 P
+X CLK 5 0 -400 200 R 50 50 0 0 P
+X VSS 6 0 -500 200 R 50 50 0 0 P
+X DAT0 7 0 -600 200 R 50 50 0 0 P
+X DAT1 8 1300 0 200 L 50 50 0 0 P
+X 9 9 1300 -100 200 L 50 50 0 0 P
+X 10 10 1300 -200 200 L 50 50 0 0 P
+X 11 11 1300 -300 200 L 50 50 0 0 P
+X 12 12 1300 -400 200 L 50 50 0 0 P
+X 13 13 1300 -500 200 L 50 50 0 0 P
+X 14 14 1300 -600 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 1100 100 1100 -700 200 -700 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library
