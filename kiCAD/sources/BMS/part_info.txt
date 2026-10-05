@@ -1,0 +1,9 @@
+Manufacturer=Texas Instruments
+PartNumber=BQ24074RGTT
+PartCategory=Integrated Circuit
+PackageCategory=Quad Flat No-Lead
+PinCount=17
+Version=1.1
+Released=2020-09-18 07:31:43
+Downloaded=2026-10-03 15:32:44
+3D=Y

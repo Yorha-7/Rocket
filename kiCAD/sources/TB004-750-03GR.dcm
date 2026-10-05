@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TB004-750-03GR
+D 2~24 Poles, Screw Type, Horizontal, 7.50 mm Pitch, 24~12 (AWG), Terminal Block Connector
+K
+F https://www.sameskydevices.com/product/resource/supplyframepdf/tb004-750.pdf
+$ENDCMP
+#
+#End Doc Library
