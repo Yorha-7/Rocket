@@ -37,6 +37,29 @@ interactive 3D viewer (`scripts/trajectory.py`) is also available on demand.
 > is wired into the build. See [Staging Notes](#staging-notes) before
 > trusting a header at face value.
 
+## Configuration headers
+
+Change C++ configuration in headers, then rebuild with `./run.sh`:
+
+| Settings | Header |
+| --- | --- |
+| Shared input/output paths, preview/full time steps and durations | `include/project_settings.hpp` |
+| Flight PID defaults, guidance limits and waypoint settings | `include/gnc/navigation.hpp` |
+| GA search bounds, comparison baseline, population and generations | `include/tuning/pid_ga_tuner.hpp` |
+| Sweep defaults and reporting thresholds | `include/analysis/interception_sweep.hpp` |
+| Actuator and sensor settings | `include/gnc/thrust_vector_control.hpp`, `include/gnc/sensors.hpp` |
+| Dynamics limits and aerodynamic coefficients | `include/sim/rocket_kinematics.hpp`, `include/sim/aerodynamics.hpp` |
+| Shared physical constants | `include/sim/physical_constants.hpp` |
+| OpenRocket parsing defaults | The corresponding `include/ork/` header |
+
+All three C++ executables load `sim/artifacts/rocket.ork` through
+`project_paths::ROCKET_DESIGN`, relative to `sim/rocket_cpp`. Public constants
+are shared with callers; implementation-only constants live at the top of
+their class's private section. PID constructor overrides remain available.
+The GA's historic comparison baseline is intentionally separate from the
+flight controller's tuned defaults. Mathematical factors, indices and
+runtime calculations stay in implementation files.
+
 ## Application entry points
 
 The executable wrapper is intentionally thin:

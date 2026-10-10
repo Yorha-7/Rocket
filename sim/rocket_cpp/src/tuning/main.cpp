@@ -1,3 +1,4 @@
+#include "project_settings.hpp"
 #include "tuning/pid_ga_tuner.hpp"
 #include "ork/ork_loader.hpp"
 #include "cli_args.hpp"
@@ -11,16 +12,16 @@
 // review and paste into NavigationStep's default gains yourself.
 int main() {
     const std::string project_root = findProjectRoot();
-    const std::string ork_path = project_root + "/../data/rocket.ork";
+    const std::string ork_path = project_root + project_paths::ROCKET_DESIGN;
 
     SimulationConfig config;
-    config.dt = 0.001;  // preview-speed -- this search runs many thousands of short flights
+    config.dt = tuning::TIME_STEP_S;
 
     std::cout << "Loading rocket design from " << ork_path << "...\n";
     OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
     config.launch_height = rocket.launch_conditions.launch_height;
-    config.init_tilt = 0.0;
-    config.init_yaw = 0.0;
+    config.init_tilt = tuning::INITIAL_TILT_DEG;
+    config.init_yaw = tuning::INITIAL_YAW_DEG;
 
     tuning::runAllThreeGAs(rocket.params, config, rocket.mass_components, rocket.flight_data);
     return 0;

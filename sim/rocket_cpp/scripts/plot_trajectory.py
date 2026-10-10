@@ -8,10 +8,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_trajectory(csv_path, output_path):
+def plot_trajectory(csv_path, output_path, trajectory_path=None):
     """Generate the 7-subplot flight-analysis figure (output_path, e.g.
     rocket_analysis.png) plus the X/Y/Z-vs-time trajectory figure, saved
-    as rocket_trajectory.png next to it."""
+    at trajectory_path (default: rocket_trajectory.png next to it)."""
     df = pd.read_csv(csv_path)
     t = df['time'].values
     h = df['height'].values
@@ -172,8 +172,9 @@ def plot_trajectory(csv_path, output_path):
     # subplot each -- this is the "where is it pointing horizontally"
     # counterpart to the height-only plot above.
     if has_xy:
-        out_dir = os.path.dirname(output_path)
-        trajectory_path = os.path.join(out_dir, 'rocket_trajectory.png') if out_dir else 'rocket_trajectory.png'
+        if trajectory_path is None:
+            out_dir = os.path.dirname(output_path)
+            trajectory_path = os.path.join(out_dir, 'rocket_trajectory.png')
         fig2, axes2 = plt.subplots(3, 1, figsize=(8, 9), constrained_layout=True, sharex=True)
         fig2.suptitle('Rocket Position Components vs Time', fontsize=14)
 
@@ -202,8 +203,9 @@ def plot_trajectory(csv_path, output_path):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python3 plot_trajectory.py <input.csv> [output.png]")
+        print("Usage: python3 plot_trajectory.py <input.csv> [output.png] [trajectory.png]")
         sys.exit(1)
     csv_path = sys.argv[1]
     output_path = sys.argv[2] if len(sys.argv) > 2 else 'rocket_analysis.png'
-    plot_trajectory(csv_path, output_path)
+    trajectory_path = sys.argv[3] if len(sys.argv) > 3 else None
+    plot_trajectory(csv_path, output_path, trajectory_path)

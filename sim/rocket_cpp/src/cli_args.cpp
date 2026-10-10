@@ -1,4 +1,5 @@
 #include "cli_args.hpp"
+#include "project_settings.hpp"
 #include <unistd.h>
 #include <climits>
 
@@ -32,13 +33,13 @@ CliArgs parseArgs(int argc, char** argv) {
 // Goal: see this function's own doc comment in cli_args.hpp.
 std::string findProjectRoot() {
     char path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-    if (len == -1) return ".";  // fallback: trust the caller's own working directory
+    ssize_t len = readlink(project_paths::EXECUTABLE_LINK, path, sizeof(path) - 1);
+    if (len == -1) return project_paths::WORKING_DIRECTORY;  // fallback: trust the caller's own working directory
     path[len] = '\0';
 
     std::string exe_dir(path);
     size_t last_slash = exe_dir.find_last_of('/');
-    exe_dir = (last_slash == std::string::npos) ? "." : exe_dir.substr(0, last_slash);
+    exe_dir = (last_slash == std::string::npos) ? project_paths::WORKING_DIRECTORY : exe_dir.substr(0, last_slash);
 
-    return exe_dir + "/..";  // build/ -> sim/rocket_cpp/
+    return exe_dir + project_paths::EXECUTABLE_TO_PROJECT;  // build/ -> sim/rocket_cpp/
 }

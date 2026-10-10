@@ -16,7 +16,7 @@ ThrustVectorControl::ThrustVectorControl() = default;
 // physical travel limit.
 void ThrustVectorControl::commandForceDirection(const Eigen::Vector3d& target_force_dir) {
     double norm = target_force_dir.norm();
-    if (norm < 1e-9) {
+    if (norm < DIRECTION_NORM_EPSILON) {
         target_gimbal_pitch_rad_ = 0.0;
         target_gimbal_yaw_rad_ = 0.0;
         return;
@@ -26,7 +26,7 @@ void ThrustVectorControl::commandForceDirection(const Eigen::Vector3d& target_fo
 
     double gx = std::asin(std::max(-1.0, std::min(1.0, nozzle_dir.x())));
     double cos_gx = std::cos(gx);
-    double gy = (std::abs(cos_gx) > 1e-6)
+    double gy = (std::abs(cos_gx) > DIRECTION_COSINE_EPSILON)
         ? std::asin(std::max(-1.0, std::min(1.0, nozzle_dir.y() / cos_gx)))
         : 0.0;
 

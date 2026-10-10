@@ -1,3 +1,4 @@
+#include "sim/physical_constants.hpp"
 #include "sim/rocket_kinematics.hpp"
 #include "gnc/sensors.hpp"
 #include <Eigen/Dense>
@@ -62,7 +63,7 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
     // the opposite sign, which is what made pitch run away instead of
     // settling the first time this was written -- see README history.
     Eigen::Vector3d v_body = rocketToNedFrame(state).transpose() * state.velocity;
-    if (velocity > 1e-6) {
+    if (velocity > MIN_AIRSPEED_MPS) {
         fc.alpha = atan2(-v_body.x(), v_body.z());  // body X-Z plane, vs. nose axis (Z)
         fc.beta = atan2(-v_body.y(), v_body.z());   // body Y-Z plane, vs. nose axis (Z)
     } else {
@@ -81,7 +82,6 @@ FlightConditions RocketKinematics::buildFlightConditions(const RocketState& stat
 // gravity -- all expressed in WORLD frame, since that's the frame
 // position/velocity are integrated in.
 Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, double thrust) const {
-    const double g0 = 9.80665;
     const double v = state.velocity.norm();
     const double v2 = v * v;
 
@@ -109,7 +109,7 @@ Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, doub
     // could flip drag into effectively pushing the rocket during a fast
     // attitude change. See README Staging Notes for the fix writeup.)
     Eigen::Vector3d drag_ned;
-    if (v > 1e-6) {
+    if (v > MIN_AIRSPEED_MPS) {
         drag_ned = -state.velocity.normalized() * drag_coeff * drag_area * 0.5 * rho * v2;
     } else {
         drag_ned = Eigen::Vector3d::Zero();
@@ -121,7 +121,7 @@ Eigen::Vector3d RocketKinematics::computeNetForce(const RocketState& state, doub
     Eigen::Matrix3d R = rocketToNedFrame(state);
     Eigen::Vector3d thrust_ned = R * thrust_body;
 
-    Eigen::Vector3d gravity(0, 0, -g0 * state.mass);
+    Eigen::Vector3d gravity(0, 0, -physical_constants::GRAVITY_MPS2 * state.mass);
 
     return thrust_ned + drag_ned + gravity;
 }

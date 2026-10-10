@@ -1,3 +1,4 @@
+#include "sim/physical_constants.hpp"
 #include "gnc/sensors.hpp"
 #include "sim/rocket_kinematics.hpp"
 #include <cmath>
@@ -8,7 +9,6 @@ namespace sensors {
 // Goal: work out this step's noisy accelerometer + gyroscope readings
 // from the vehicle's true state.
 void Gyro::update(const RocketState& state, const RocketState& prev_state, double dt) {
-    const double g0 = 9.80665;
 
     // Goal: get total (kinematic) world-frame acceleration from the
     // change in velocity, then subtract gravity to get what an
@@ -17,10 +17,10 @@ void Gyro::update(const RocketState& state, const RocketState& prev_state, doubl
     // proof mass exactly like everything around it, leaving no relative
     // force to sense.
     Eigen::Vector3d total_accel_world = Eigen::Vector3d::Zero();
-    if (dt > 1e-9) {
+    if (dt > MIN_TIME_STEP_S) {
         total_accel_world = (state.velocity - prev_state.velocity) / dt;
     }
-    Eigen::Vector3d gravity_world(0, 0, -g0);
+    Eigen::Vector3d gravity_world(0, 0, -physical_constants::GRAVITY_MPS2);
     Eigen::Vector3d proper_accel_world = total_accel_world - gravity_world;
 
     // Goal: rotate that into BODY frame -- an accelerometer measures
@@ -46,7 +46,7 @@ void Gyro::update(const RocketState& state, const RocketState& prev_state, doubl
     }
 
     angular_accel_ = Eigen::Vector3d::Zero();
-    if (dt > 1e-9) {
+    if (dt > MIN_TIME_STEP_S) {
         angular_accel_ = (angular_vel_ - angular_vel_prev_noisy) / dt;
     }
 
@@ -63,8 +63,6 @@ void Gyro::update(const RocketState& state, const RocketState& prev_state, doubl
 // pressure back into an altitude reading -- a real barometric
 // altimeter's actual job.
 void Baro::update(const RocketState& state, double dt) {
-    const double T0 = 288.15, P0 = 101325.0, LAPSE_RATE = -0.0065;
-    const double G0 = 9.80665, R_GAS = 287.058;
 
     double altitude = std::max(0.0, state.position(2));
     double T = T0 + LAPSE_RATE * altitude;

@@ -66,10 +66,10 @@ int noseShapeCode(const std::string& shape) {
 // finishes -- typical published figures, not critical precision, since
 // only the staged aerodynamics.hpp model reads this today.
 double roughnessForFinish(const std::string& finish) {
-    if (finish == "polished") return 2.0e-6;
-    if (finish == "smooth") return 6.0e-6;
-    if (finish == "unfinished" || finish == "rough") return 150.0e-6;
-    return 20.0e-6;  // "normal", or unspecified
+    if (finish == "polished") return ork_geometry_settings::POLISHED_ROUGHNESS_M;
+    if (finish == "smooth") return ork_geometry_settings::SMOOTH_ROUGHNESS_M;
+    if (finish == "unfinished" || finish == "rough") return ork_geometry_settings::UNFINISHED_ROUGHNESS_M;
+    return ork_geometry_settings::NORMAL_ROUGHNESS_M;  // "normal", or unspecified
 }
 
 }  // namespace

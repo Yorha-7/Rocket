@@ -19,14 +19,31 @@
 
 namespace tuning {
 
+// Search bounds and historic comparison baseline (independent of flight defaults).
+constexpr double KP_MIN = 0.0, KP_MAX = 3.0, KP_BASELINE = 1.0;
+constexpr double KI_MIN = 0.0, KI_MAX = 2.0, KI_BASELINE = 0.6;
+constexpr double KD_MIN = 0.0, KD_MAX = 0.5, KD_BASELINE = 0.0;
+
+// Goal: a single fixed "local hop" target, close enough (magnitude <
+// this project's own Navigation::WAYPOINT_STEP_M, 50m) that Navigation
+// always collapses it to exactly one waypoint -- i.e. this evaluates
+// NavigationStep's own steering law directly, uncomplicated by the
+// path planner ever advancing mid-flight.
+inline const Eigen::Vector3d LOCAL_HOP_TARGET(0, 20, 45);
+constexpr double LOCAL_HOP_DURATION_S = 30.0;  // generous -- ground termination ends a real flight sooner
+
+constexpr int POPULATION_SIZE = 15;
+constexpr int N_GENERATIONS = 8;
+constexpr double ELITE_FRACTION = 0.25;  // "fittest slice" the next parent's median comes from
+
+constexpr double TIME_STEP_S = 0.001;
+constexpr double INITIAL_TILT_DEG = 0.0;
+constexpr double INITIAL_YAW_DEG = 0.0;
+constexpr double FITNESS_DISTANCE_OFFSET_M = 1.0;
+
 enum class Param { KP, KI, KD };
 
-// Goal: one place for each gain's search range and today's known-good
-// starting point -- kept decoupled from NavigationStep's own default
-// constructor arguments (include/gnc/navigation.hpp) rather than
-// shared, same pattern this project already uses elsewhere (e.g.
-// ThrustVectorControl's own MAX_GIMBAL_DEG copy) -- just keep the two
-// in sync by hand if NavigationStep's defaults ever change.
+// Search bounds and baseline are declared above; specFor selects one gain.
 struct ParamSpec {
     double min, max, baseline;
 };
@@ -40,6 +57,10 @@ std::string paramName(Param p);
 // operations on a plain uint8_t instead of a bitset/BCD abstraction.
 using Chromosome = uint8_t;
 constexpr int GENE_BITS = 8;
+constexpr unsigned GENE_MAX = (1u << GENE_BITS) - 1;
+constexpr double MIN_PROGRESS_DENOMINATOR = 1e-6;
+constexpr unsigned PARALLEL_GAIN_SEARCHES = 3;
+constexpr size_t PROGRESS_REPORTS_PER_GENERATION = 5;
 
 double decode(Chromosome c, const ParamSpec& spec);
 Chromosome encode(double value, const ParamSpec& spec);
@@ -53,9 +74,9 @@ Chromosome encode(double value, const ParamSpec& spec);
 // searches together, not a bug -- exact lockstep ordering doesn't
 // matter for a search heuristic like this one.
 struct SharedGains {
-    std::atomic<double> kp{1.0};
-    std::atomic<double> ki{0.6};
-    std::atomic<double> kd{0.0};
+    std::atomic<double> kp{KP_BASELINE};
+    std::atomic<double> ki{KI_BASELINE};
+    std::atomic<double> kd{KD_BASELINE};
 };
 double loadShared(const SharedGains& shared, Param p);
 void storeShared(SharedGains& shared, Param p, double value);

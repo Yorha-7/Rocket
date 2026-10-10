@@ -1,3 +1,4 @@
+#include "project_settings.hpp"
 #include "simulation_runner.hpp"
 
 #include "sim/rocket_kinematics.hpp"
@@ -13,6 +14,18 @@
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
+
+namespace {
+// Preserve configured paths containing spaces or shell metacharacters.
+std::string shellQuote(const std::string& value) {
+    std::string quoted = "'";
+    for (char c : value) {
+        if (c == '\'') quoted += "'\\''";
+        else quoted += c;
+    }
+    return quoted + "'";
+}
+}  // namespace
 
 // ##### loadTvcTestSequence() #####
 // Goal: read data/tvc_test_sequence.csv (time-segment table: t_start_s,
@@ -67,14 +80,14 @@ int runSimulation(const CliArgs& args) {
     // the repo root (see findProjectRoot()), not one machine's hardcoded
     // absolute path.
     const std::string project_root = findProjectRoot();
-    const std::string ork_path = project_root + "/../data/rocket.ork";
+    const std::string ork_path = project_root + project_paths::ROCKET_DESIGN;
 
     SimulationConfig config;
     // Goal: --preview trades fidelity for speed -- meant for the GUI's
     // interactive edit-run-look loop, not for trusted final numbers (see
     // README). Plain runs (no flag) keep today's full-fidelity settings.
-    config.dt = args.preview ? 0.004 : 0.001;
-    config.sim_duration = args.preview ? 60.0 : 300.0;
+    config.dt = args.preview ? simulation_settings::PREVIEW_DT_S : simulation_settings::FULL_DT_S;
+    config.sim_duration = args.preview ? simulation_settings::PREVIEW_DURATION_S : simulation_settings::FULL_DURATION_S;
 
     std::cout << "Loading rocket design and flight data from " << ork_path << "...\n";
     OrkRocket rocket = loadOrkRocket(ork_path, config.dt);
@@ -121,12 +134,12 @@ int runSimulation(const CliArgs& args) {
     std::cout << "Computed dry I_yy: " << dry_mp.I_yy << " kg*m^2\n";
 
     FlightConditions sample_fc{};
-    sample_fc.altitude = 100.0;
-    sample_fc.velocity = 50.0;
+    sample_fc.altitude = simulation_settings::DIAGNOSTIC_ALTITUDE_M;
+    sample_fc.velocity = simulation_settings::DIAGNOSTIC_SPEED_MPS;
     sample_fc.mach = sample_fc.velocity / aero.getSpeedOfSound(sample_fc.altitude);
-    sample_fc.alpha = 0.05;  // ~3 deg, representative mid-flight angle of attack
+    sample_fc.alpha = simulation_settings::DIAGNOSTIC_ALPHA_RAD;  // ~3 deg, representative mid-flight angle of attack
     AerodynamicCoefficients sample_coeffs = aero.computeCoefficients(sample_fc);
-    std::cout << "Computed Cd @ 50 m/s, 100 m altitude: " << sample_coeffs.Cd
+    std::cout << "Computed Cd @ " << sample_fc.velocity << " m/s, " << sample_fc.altitude << " m altitude: " << sample_coeffs.Cd
               << " (Cn_alpha=" << sample_coeffs.Cn_alpha << "/rad)\n";
 
     // ##### Run the simulation #####
@@ -143,7 +156,8 @@ int runSimulation(const CliArgs& args) {
     // --target, no mission-planning input beyond a single fixed point yet.
     const Eigen::Vector3d NAV_TARGET(args.target_x, args.target_y, args.target_z);
     navigation::Navigation navigation(
-        NAV_TARGET, config.dt, 2.7176, 1.8196, 0.0745,
+        NAV_TARGET, config.dt, navigation::NavigationStep::DEFAULT_KP,
+        navigation::NavigationStep::DEFAULT_KI, navigation::NavigationStep::DEFAULT_KD,
         args.terminal_interception);
     std::cout << "Navigation target: (" << NAV_TARGET.x() << ", " << NAV_TARGET.y()
               << ", " << NAV_TARGET.z() << ") m across " << navigation.waypointCount()
@@ -236,12 +250,12 @@ int runSimulation(const CliArgs& args) {
     if (!in_project_root) {
         std::cerr << "Warning: could not chdir to project root; writing CSV to current directory.\n";
     }
-    std::ofstream csv("rocket_trajectory.csv");
+    std::ofstream csv(project_paths::TRAJECTORY_CSV);
     csv << "time,x,y,height,velocity,pitch,yaw,ang_vel,ang_accel,"
         << "fx,fy,fz,thrust,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg,"
         << "target_x,target_y,target_z\n";
     for (size_t i = 0; i < states.size(); ++i) {
-        csv << std::fixed << std::setprecision(6);
+        csv << std::fixed << std::setprecision(simulation_settings::CSV_PRECISION);
         csv << time_vec[i] << "," << x_vec[i] << "," << y_vec[i] << "," << height_vec[i] << ","
             << velocity_vec[i] << ","
             << pitch_vec[i] << "," << yaw_vec[i] << "," << ang_vel_vec[i] << "," << ang_accel_vec[i] << ","
@@ -260,11 +274,16 @@ int runSimulation(const CliArgs& args) {
     if (!args.no_plot) {
         std::cout << "\nGenerating plots via Python/matplotlib...\n";
         if (in_project_root) {
-            int result = system("python3 scripts/plot_trajectory.py rocket_trajectory.csv rocket_analysis.png");
+            const std::string command = shellQuote(project_paths::PYTHON_EXECUTABLE) + " " +
+                shellQuote(project_paths::PLOT_SCRIPT) + " " +
+                shellQuote(project_paths::TRAJECTORY_CSV) + " " +
+                shellQuote(project_paths::ANALYSIS_PNG) + " " +
+                shellQuote(project_paths::TRAJECTORY_PNG);
+            int result = system(command.c_str());
             if (result != 0) {
                 std::cerr << "Warning: Python plot generation failed (matplotlib not installed?). Continuing...\n";
             } else {
-                std::cout << "Plots saved to rocket_analysis.png, rocket_trajectory.png\n";
+                std::cout << "Plots saved to " << project_paths::ANALYSIS_PNG << ", " << project_paths::TRAJECTORY_PNG << "\n";
             }
         } else {
             std::cerr << "Warning: Could not change to project root directory. Skipping plot.\n";
@@ -286,8 +305,8 @@ int runSimulation(const CliArgs& args) {
                       ? " (reached the final target waypoint)\n"
                       : " -- STUCK short of the final target, never entered the arrival radius of a later waypoint\n");
     std::cout << "Simulation complete.\n";
-    std::cout << "Results: rocket_trajectory.csv"
-              << (args.no_plot ? "" : ", rocket_analysis.png, rocket_trajectory.png") << "\n";
+    std::cout << "Results: " << project_paths::TRAJECTORY_CSV
+              << (args.no_plot ? "" : std::string(", ") + project_paths::ANALYSIS_PNG + ", " + project_paths::TRAJECTORY_PNG) << "\n";
     std::cout << "Ground termination: stops when z < 0\n";
 
     return 0;

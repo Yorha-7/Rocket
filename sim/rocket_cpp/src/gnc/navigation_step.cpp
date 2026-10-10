@@ -1,3 +1,4 @@
+#include "sim/physical_constants.hpp"
 #include "gnc/navigation.hpp"
 #include "sim/rocket_kinematics.hpp"
 #include <algorithm>
@@ -57,8 +58,7 @@ Eigen::Vector3d NavigationStep::estimatePosition(const sensors::Gps& gps, const 
     // the (noisy) proper acceleration back to world frame, add gravity
     // back, and recover total kinematic acceleration, the quantity that
     // actually integrates into velocity/position.
-    const double g0 = 9.80665;
-    Eigen::Vector3d gravity_world(0, 0, -g0);
+    Eigen::Vector3d gravity_world(0, 0, -physical_constants::GRAVITY_MPS2);
     Eigen::Vector3d total_accel_world = R * gyro.readAccel() + gravity_world;
 
     // Goal: predict from the accelerometer alone -- accurate over one
@@ -118,12 +118,9 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
     if (terminal_interception_) {
         Eigen::Vector3d to_target_world = target_position_ - position;
         const double distance = to_target_world.norm();
-        if (distance < 1e-6) return Eigen::Vector3d(0, 0, 1);
+        if (distance < TARGET_DISTANCE_EPSILON_M) return Eigen::Vector3d(0, 0, 1);
 
         const Eigen::Vector3d line_of_sight = to_target_world / distance;
-        constexpr double MAX_TERMINAL_SPEED_MPS = 120.0;
-        constexpr double BRAKING_ACCEL_MPS2 = 30.0;
-        constexpr double VELOCITY_GAIN_PER_S = 1.5;
         const double desired_speed = std::min(
             MAX_TERMINAL_SPEED_MPS,
             std::sqrt(2.0 * BRAKING_ACCEL_MPS2 * distance));
@@ -136,10 +133,10 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
 
         // The dynamics apply gravity after thrust. Request the thrust
         // force that would produce acceleration_command in world axes.
-        acceleration_command += Eigen::Vector3d(0.0, 0.0, 9.80665);
+        acceleration_command += Eigen::Vector3d(0.0, 0.0, physical_constants::GRAVITY_MPS2);
 
         Eigen::Vector3d force_body = R.transpose() * acceleration_command;
-        if (force_body.norm() < 1e-9) return Eigen::Vector3d(0, 0, 1);
+        if (force_body.norm() < FORCE_EPSILON_MPS2) return Eigen::Vector3d(0, 0, 1);
         return force_body.normalized();
     }
 
@@ -147,7 +144,7 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
     // target, still in world frame.
     Eigen::Vector3d to_target_world = target_position_ - position;
 
-    if (to_target_world.norm() < 1e-6) {
+    if (to_target_world.norm() < TARGET_DISTANCE_EPSILON_M) {
         return Eigen::Vector3d(0, 0, 1);  // already there -- hold neutral, nothing to aim at
     }
 
@@ -162,7 +159,7 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
     // ThrustVectorControl uses internally.
     double err_pitch = std::asin(std::max(-1.0, std::min(1.0, dir_body.x())));
     double cos_p = std::cos(err_pitch);
-    double err_yaw = (std::abs(cos_p) > 1e-6)
+    double err_yaw = (std::abs(cos_p) > DIRECTION_COSINE_EPSILON)
         ? std::asin(std::max(-1.0, std::min(1.0, dir_body.y() / cos_p)))
         : 0.0;
 
@@ -170,8 +167,8 @@ Eigen::Vector3d NavigationStep::computeTvcTarget(const sensors::Gps& gps, const 
     // stretch can't build more windup than one actuator swing is worth.
     integral_pitch_ += err_pitch * dt;
     integral_yaw_ += err_yaw * dt;
-    double max_integral = (ki_ > 1e-9) ? (MAX_GIMBAL_RAD / ki_) : 0.0;
-    if (ki_ > 1e-9) {
+    double max_integral = (ki_ > INTEGRAL_GAIN_EPSILON) ? (MAX_GIMBAL_RAD / ki_) : 0.0;
+    if (ki_ > INTEGRAL_GAIN_EPSILON) {
         integral_pitch_ = std::max(-max_integral, std::min(max_integral, integral_pitch_));
         integral_yaw_ = std::max(-max_integral, std::min(max_integral, integral_yaw_));
     }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/physical_constants.hpp"
+
 #include "sim/rocket_types.hpp"
 #include <Eigen/Dense>
 #include <array>
@@ -94,10 +96,11 @@ private:
     // ^ ~20 deg/h bias instability -- not in the datasheet directly;
     // representative mid-range figure for consumer-grade MEMS gyros.
 
-    static constexpr double ACCEL_WHITE_NOISE_STD_MPS2 = 0.008 * 9.80665;
+    static constexpr double MIN_TIME_STEP_S = 1e-9;
+    static constexpr double ACCEL_WHITE_NOISE_STD_MPS2 = 0.008 * physical_constants::GRAVITY_MPS2;
     // ^ datasheet Table 2: "Total RMS Noise" = 8 mg-rms @ 94Hz (DLPFCFG=2).
 
-    static constexpr double ACCEL_BIAS_SIGMA_MPS2 = 0.002 * 9.80665;
+    static constexpr double ACCEL_BIAS_SIGMA_MPS2 = 0.002 * physical_constants::GRAVITY_MPS2;
     // ^ ~2 mg -- order-of-magnitude estimate from the datasheet's own
     // temperature coefficient over a modest in-flight temperature swing.
 
@@ -138,6 +141,12 @@ public:
     double readAltitude() const { return altitude_m_; }
 
 private:
+    static constexpr double T0 = physical_constants::SEA_LEVEL_TEMPERATURE_K;
+    static constexpr double P0 = physical_constants::SEA_LEVEL_PRESSURE_PA;
+    static constexpr double LAPSE_RATE = physical_constants::TEMPERATURE_LAPSE_RATE;
+    static constexpr double G0 = physical_constants::GRAVITY_MPS2;
+    static constexpr double R_GAS = physical_constants::AIR_GAS_CONSTANT;
+
     static constexpr double PRESSURE_WHITE_NOISE_STD_PA = 0.016;  // BMP388 datasheet RMS noise
     static constexpr double PRESSURE_DRIFT_SIGMA_PA = 2.0;        // environmental drift, order-of-magnitude estimate
     static constexpr double DRIFT_TAU_S = 30.0;

@@ -15,7 +15,7 @@ std::string readOrkXml(const std::string& ork_path) {
         throw std::runtime_error("Could not open .ork file as a zip archive: " + ork_path);
     }
 
-    zip_int64_t index = zip_name_locate(archive, "rocket.ork", 0);
+    zip_int64_t index = zip_name_locate(archive, ork_archive_settings::XML_ENTRY, 0);
     if (index < 0) {
         zip_close(archive);
         throw std::runtime_error("No 'rocket.ork' entry found inside " + ork_path);

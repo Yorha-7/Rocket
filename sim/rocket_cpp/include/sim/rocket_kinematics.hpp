@@ -71,6 +71,13 @@ public:
     static Eigen::Matrix3d rocketToNedFrame(const RocketState& state);
 
 private:
+    static constexpr double MIN_AIRSPEED_MPS = 1e-6;
+    static constexpr double MAX_ALPHA = 100.0;       // rad/s^2
+    static constexpr double MAX_ANGULAR_VEL = 10.0;  // rad/s
+    static constexpr double IGNITION_TRANSIENT_S = 0.1;
+    static constexpr double MAX_PITCH = 1.5;        // ignition-only limit, rad
+    static constexpr double MAX_AERO_ANGLE_RAD = 0.5;
+    static constexpr double DAMPING_FACTOR = 0.6;
     // ##### Translational motion (rocket_kinematics.cpp) #####
     Eigen::Vector3d computeAcceleration(const RocketState& state, double thrust) const;
     FlightConditions buildFlightConditions(const RocketState& state) const;

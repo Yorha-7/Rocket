@@ -21,10 +21,6 @@
 namespace tuning {
 namespace {
 
-constexpr int POPULATION_SIZE = 15;
-constexpr int N_GENERATIONS = 8;
-constexpr double ELITE_FRACTION = 0.25;  // "fittest slice" the next parent's median comes from
-
 struct Candidate {
     Chromosome chromosome;
     double value;
@@ -44,7 +40,7 @@ std::vector<Chromosome> generateSwarm(const std::vector<Chromosome>& population)
         for (size_t j = i + 1; j < population.size(); ++j) {
             Chromosome a = population[i], b = population[j];
             for (int point = 1; point < GENE_BITS; ++point) {
-                uint8_t high_mask = static_cast<uint8_t>(0xFFu << (GENE_BITS - point));
+                uint8_t high_mask = static_cast<uint8_t>(GENE_MAX << (GENE_BITS - point));
                 uint8_t low_mask = static_cast<uint8_t>(~high_mask);
                 Chromosome child_ab = static_cast<Chromosome>((a & high_mask) | (b & low_mask));
                 Chromosome child_ba = static_cast<Chromosome>((b & high_mask) | (a & low_mask));
@@ -134,25 +130,25 @@ double runParamGA(Param which, SharedGains& shared, const RocketParams& params, 
     ParamSpec spec = specFor(which);
     std::string name = paramName(which);
     std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<int> byte_dist(0, 255);
+    std::uniform_int_distribution<int> byte_dist(0, GENE_MAX);
 
     std::vector<Chromosome> population;
     population.push_back(encode(spec.baseline, spec));
     for (int i = 1; i < POPULATION_SIZE; ++i) population.push_back(static_cast<Chromosome>(byte_dist(rng)));
 
-    int num_workers = std::max(1u, std::thread::hardware_concurrency() / 3);
+    int num_workers = std::max(1u, std::thread::hardware_concurrency() / PARALLEL_GAIN_SEARCHES);
     double current_value = spec.baseline;
 
     for (int gen = 1; gen <= N_GENERATIONS; ++gen) {
         auto gen_start = std::chrono::steady_clock::now();
 
         auto progress_cb = [&](size_t done, size_t total) {
-            size_t report_every = std::max<size_t>(1, total / 5);
+            size_t report_every = std::max<size_t>(1, total / PROGRESS_REPORTS_PER_GENERATION);
             if (done % report_every != 0 && done != total) return;
             std::lock_guard<std::mutex> lock(print_mutex);
             double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - gen_start).count();
-            double rate = done / std::max(elapsed, 1e-6);
-            double eta = (total - done) / std::max(rate, 1e-6);
+            double rate = done / std::max(elapsed, MIN_PROGRESS_DENOMINATOR);
+            double eta = (total - done) / std::max(rate, MIN_PROGRESS_DENOMINATOR);
             std::cout << "[" << name << "] Gen " << gen << "/" << N_GENERATIONS << ": " << done << "/" << total
                       << " candidates (" << (100 * done / total) << "%) elapsed=" << elapsed
                       << "s ETA=" << eta << "s\n";
