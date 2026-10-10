@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/rocket_types.hpp"
+#include "sim/rotational_damping.hpp"
 #include "sim/aerodynamics.hpp"
 #include "sim/mass_properties_model.hpp"
 #include "ork/ork_mass_components.hpp"
@@ -77,7 +78,10 @@ private:
     static constexpr double IGNITION_TRANSIENT_S = 0.1;
     static constexpr double MAX_PITCH = 1.5;        // ignition-only limit, rad
     static constexpr double MAX_AERO_ANGLE_RAD = 0.5;
-    static constexpr double DAMPING_FACTOR = 0.6;
+    // Shared body/fin crossflow damping, identical in pitch and yaw.
+    RotationalDamping computeRotationalDamping(double rate, const RocketState& state,
+                                               const MassProperties& mp) const;
+
     // ##### Translational motion (rocket_kinematics.cpp) #####
     Eigen::Vector3d computeAcceleration(const RocketState& state, double thrust) const;
     FlightConditions buildFlightConditions(const RocketState& state) const;

@@ -21,3 +21,5 @@ jobs:
       run: cmake -S sim/rocket_cpp -B sim/rocket_cpp/build
     - name: build
       run: cmake --build sim/rocket_cpp/build
+    - name: test rotational damping
+      run: ctest --test-dir sim/rocket_cpp/build --output-on-failure

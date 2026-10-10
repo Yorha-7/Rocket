@@ -39,6 +39,11 @@ def plot_trajectory(csv_path, output_path, trajectory_path=None):
         torque_aero = df['torque_aero'].values
         torque_damping = df['torque_damping'].values
 
+    has_damping_parts = {'torque_damping_body', 'torque_damping_fin'}.issubset(df.columns)
+    if has_damping_parts:
+        damping_body = df['torque_damping_body'].values
+        damping_fin = df['torque_damping_fin'].values
+
     # Trim data at impact: find first zero-height after apogee
     apogee_idx = np.argmax(h)
     impact_candidates = np.where(h[apogee_idx:] <= 1e-6)[0]
@@ -60,6 +65,10 @@ def plot_trajectory(csv_path, output_path, trajectory_path=None):
             torque_gravity = torque_gravity[:impact_idx + 1]
             torque_aero = torque_aero[:impact_idx + 1]
             torque_damping = torque_damping[:impact_idx + 1]
+
+    if has_damping_parts and len(impact_candidates) > 0:
+        damping_body = damping_body[:impact_idx + 1]
+        damping_fin = damping_fin[:impact_idx + 1]
 
     dt = t[1] - t[0]
 
@@ -156,7 +165,11 @@ def plot_trajectory(csv_path, output_path, trajectory_path=None):
     if has_torques:
         ax.plot(t, torque_gravity, 'r-', lw=1, label='Gravity')
         ax.plot(t, torque_aero, 'g-', lw=1, label='Aerodynamic')
-        ax.plot(t, torque_damping, 'b-', lw=1, label='Damping')
+        if has_damping_parts:
+            ax.plot(t, damping_body, 'b-', lw=1, label='Body damping')
+            ax.plot(t, damping_fin, color='orange', lw=1, label='Fin damping')
+        else:
+            ax.plot(t, torque_damping, 'b-', lw=1, label='Damping')
         ax.axvline(t_burnout, color='magenta', ls='--')
         ax.set(xlabel='Time (s)', ylabel='Torque (N*m)', title='Torque Analysis')
         ax.grid(alpha=0.3)

@@ -51,24 +51,11 @@ double RocketKinematics::computeAerodynamicMoment(const RocketState& state,
     return -0.5 * rho * v * v * Cn_alpha * alpha_limited * A * d;
 }
 
-// ##### computeDampingTorque() #####
-// Goal: resist whatever rotation is currently happening, proportional to
-// how fast it's spinning -- like a weathervane settling down instead of
-// swinging forever. 0.6 is OpenRocket's own empirical damping factor for
-// this shape of formula. (This coefficient has been measured elsewhere
-// this session as noticeably weak -- see README Staging Notes -- worth
-// knowing if a trajectory oscillates for longer than expected.)
+// Body and fin crossflow moments oppose rotation even at zero forward speed.
 double RocketKinematics::computeDampingTorque(const RocketState& state,
                                               const MassProperties& mp) const {
-    double altitude = std::max(0.0, state.position(2));
-    double rho = aero_.getDensity(altitude);
-
-    double d = (mp.cp_location_cm - mp.cg_location_cm) / 100.0;
-    double A = params_.reference_area;
-
-    double c_damp = DAMPING_FACTOR * 0.5 * rho * state.velocity.norm() * d * d * A;
-
-    return -c_damp * state.angular_vel(1);
+    const auto damping = computeRotationalDamping(state.angular_vel(1), state, mp);
+    return damping.body + damping.fin;
 }
 
 // Goal: add the three torque sources into the one number the integrator
@@ -139,6 +126,9 @@ PitchTorques RocketKinematics::computePitchTorques(const RocketState& state) con
     PitchTorques torques{};
     torques.gravity = computeGravityTorque(state, mp);
     torques.aerodynamic = computeAerodynamicMoment(state, mp);
-    torques.damping = computeDampingTorque(state, mp);
+    const auto damping = computeRotationalDamping(state.angular_vel(1), state, mp);
+    torques.damping_body = damping.body;
+    torques.damping_fin = damping.fin;
+    torques.damping = damping.body + damping.fin;
     return torques;
 }

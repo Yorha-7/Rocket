@@ -10,6 +10,16 @@ RocketKinematics::RocketKinematics(const RocketParams& params, const SimulationC
       mass_model_(mass_components, params_.body_diameter, params_.body_length),
       cp_location_cm_(aero_.computeCenterOfPressure()) {}
 
+RotationalDamping RocketKinematics::computeRotationalDamping(
+    double rate, const RocketState& state, const MassProperties& mp) const {
+    const double altitude = std::max(0.0, state.position(2));
+    const double axial_speed = std::abs((rocketToNedFrame(state).transpose() * state.velocity).z());
+    const double mach = state.velocity.norm() / aero_.getSpeedOfSound(altitude);
+    return rotationalCrossflowDamping(params_, mp.cg_location_cm / 100.0,
+        params_.fin_count > 0 ? aero_.computeFinCp() / 100.0 : 0.0,
+        aero_.getDensity(altitude), rate, axial_speed, aero_.computeFinCnAlpha(mach));
+}
+
 // ##### rocketToNedFrame() #####
 // Goal: given the vehicle's current roll/pitch/yaw, build the matrix
 // that converts "a direction described in the rocket's own axes" into

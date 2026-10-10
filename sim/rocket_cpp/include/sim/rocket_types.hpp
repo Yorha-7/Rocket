@@ -152,7 +152,9 @@ struct MassProperties {
 struct PitchTorques {
     double gravity;      // N*m
     double aerodynamic;  // N*m
-    double damping;      // N*m
+    double damping;      // N*m, body + fins
+    double damping_body; // N*m
+    double damping_fin;  // N*m
 };
 
 // Same breakdown, yaw axis -- see YawTorques' mirror-of-pitch model in
@@ -160,7 +162,9 @@ struct PitchTorques {
 struct YawTorques {
     double gravity;      // N*m -- always 0, same reasoning as PitchTorques
     double aerodynamic;  // N*m
-    double damping;      // N*m
+    double damping;      // N*m, body + fins
+    double damping_body; // N*m
+    double damping_fin;  // N*m
 };
 
 // ##### gramsToKg #####

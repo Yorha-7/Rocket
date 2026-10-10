@@ -226,6 +226,7 @@ int runSimulation(const CliArgs& args) {
     std::vector<double> torque_gravity_vec(states.size(), 0.0);
     std::vector<double> torque_aero_vec(states.size(), 0.0);
     std::vector<double> torque_damping_vec(states.size(), 0.0);
+    std::vector<double> damping_body_vec(states.size(), 0.0), damping_fin_vec(states.size(), 0.0);
     for (size_t i = 0; i < states.size(); ++i) {
         double thrust_i = (i < flight_data.thrust.size()) ? flight_data.thrust[i] : 0.0;
         thrust_vec[i] = thrust_i;
@@ -238,6 +239,8 @@ int runSimulation(const CliArgs& args) {
         torque_gravity_vec[i] = torques.gravity;
         torque_aero_vec[i] = torques.aerodynamic;
         torque_damping_vec[i] = torques.damping;
+        damping_body_vec[i] = torques.damping_body;
+        damping_fin_vec[i] = torques.damping_fin;
     }
 
     // ##### Save CSV output #####
@@ -253,7 +256,7 @@ int runSimulation(const CliArgs& args) {
     std::ofstream csv(project_paths::TRAJECTORY_CSV);
     csv << "time,x,y,height,velocity,pitch,yaw,ang_vel,ang_accel,"
         << "fx,fy,fz,thrust,torque_gravity,torque_aero,torque_damping,gimbal_pitch_deg,gimbal_yaw_deg,"
-        << "target_x,target_y,target_z\n";
+        << "target_x,target_y,target_z,torque_damping_body,torque_damping_fin\n";
     for (size_t i = 0; i < states.size(); ++i) {
         csv << std::fixed << std::setprecision(simulation_settings::CSV_PRECISION);
         csv << time_vec[i] << "," << x_vec[i] << "," << y_vec[i] << "," << height_vec[i] << ","
@@ -262,7 +265,7 @@ int runSimulation(const CliArgs& args) {
             << fx_vec[i] << "," << fy_vec[i] << "," << fz_vec[i] << "," << thrust_vec[i] << ","
             << torque_gravity_vec[i] << "," << torque_aero_vec[i] << "," << torque_damping_vec[i] << ","
             << gimbal_pitch_vec[i] << "," << gimbal_yaw_vec[i] << ","
-            << NAV_TARGET.x() << "," << NAV_TARGET.y() << "," << NAV_TARGET.z() << "\n";
+            << NAV_TARGET.x() << "," << NAV_TARGET.y() << "," << NAV_TARGET.z() << "," << damping_body_vec[i] << "," << damping_fin_vec[i] << "\n";
     }
     csv.close();
 

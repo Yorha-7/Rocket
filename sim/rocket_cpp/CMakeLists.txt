@@ -101,3 +101,12 @@ foreach(target rocket_cpp pid_ga_tuner interception_sweep)
         Threads::Threads
     )
 endforeach()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(rotational_damping_test tests/rotational_damping_test.cpp ${ROCKET_CORE_SOURCES})
+    target_include_directories(rotational_damping_test PRIVATE include)
+    target_link_libraries(rotational_damping_test PRIVATE Eigen3::Eigen PkgConfig::LIBZIP PkgConfig::TINYXML2 Threads::Threads)
+    add_test(NAME rotational_damping COMMAND rotational_damping_test)
+    add_test(NAME passive_flight_damping COMMAND rotational_damping_test "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/rocket.ork")
+endif()

@@ -707,6 +707,27 @@ $$
 C_{N\alpha,fin} = \frac{K_{fb}\cdot 4N(s/d)^2}{1+\sqrt{1+(2L_m/(C_r+C_t))^2}} \cdot \frac{1}{\sqrt{1-M^2}}
 $$
 
+**Rotational damping:** pitch and yaw share `rotational_damping.hpp`.
+Fin damping uses the fin aerodynamic-center-to-current-CG distance, not the
+whole-vehicle CP–CG distance. Its forward-flight coefficient is
+`0.5 * rho * abs(axial_speed) * reference_area * fin_Cn_alpha * lever²`,
+derived from the rotation-induced small angle `angular_rate * lever / speed`.
+At zero axial speed it approaches OpenRocket's quadratic crossflow estimate:
+`torque_fin = -0.3 * rho * min(fin_count, 4) * single_fin_area * abs(lever)³ * rate * abs(rate)`.
+A root-sum-square blend of the two damping coefficients recovers both limits
+without dividing by airspeed or adding both full models. This blending is a
+modeling approximation, not an OpenRocket formula or a validated stall model.
+Body crossflow is integrated along the tube; the nose uses half the tube radius
+as an average-radius approximation. Both contributions oppose rotation and
+follow the changing CG. See [OpenRocket technical documentation §3.2.3](https://openrocket.sourceforge.net/techdoc.pdf#page=44)
+for the crossflow estimates. Earlier staging notes describe the previous damping model.
+
+The CSV preserves `torque_damping` as the sum and appends
+`torque_damping_body` and `torque_damping_fin`. The plot shows those components
+when available and supports older CSVs. Run `ctest --test-dir build --output-on-failure`
+after building to check dissipativity, geometry/air-density limits, pitch/yaw
+integration, and timestep convergence of isolated rotational decay.
+
 **Center of pressure** (Mach-independent — the compressibility factor cancels in this ratio): nose CP is a fixed fraction of nose length by shape (0.666 conical, 0.466 ogive, 0.5 hemisphere/parabolic); fin CP is the standard trapezoid centroid from the root leading edge. Combined:
 $$
 X_{cp} = \frac{C_{N\alpha,body}\,X_{cp,body} + C_{N\alpha,fin}\,X_{cp,fin}}{C_{N\alpha,body}+C_{N\alpha,fin}}
@@ -741,7 +762,7 @@ replaced):
 $$
 \tau_g = 0, \qquad
 \tau_a = -\tfrac12\rho v^2 C_{N\alpha}\alpha A d\ (\alpha\text{ clamped }\pm0.5\text{ rad}), \qquad
-\tau_d = -\left(0.6\cdot\tfrac12\rho v d^2 A\right)q
+\tau_d = \tau_{\mathrm{body}} + \tau_{\mathrm{fin}}
 $$
 
 $$
@@ -781,7 +802,7 @@ interactive 3D viewer covered in [Visualize a trajectory](#visualize-a-trajector
 | Height vs Time | `position(2)` | Burnout, apogee (auto-detected), impact |
 | Velocity vs Time | $\lVert\vec v\rVert$ | Speed magnitude, not signed vertical velocity |
 | Acceleration vs Time | `np.gradient(v, dt)` (recomputed in Python) | Sharp burnout spike is the thrust cutoff. The impact sample is dropped before differentiating — velocity snaps to 0 there, which would otherwise fake a huge spike |
-| Pitch Angle vs Time | `orientation(1)` in degrees | Damps fast under thrust (high airspeed → strong damping), swells again near apogee (airspeed → 0, damping vanishes), re-damps during descent |
+| Pitch Angle vs Time | `orientation(1)` in degrees | Shows the attitude response; fin lift damps rotation in axial flow and body/fin crossflow remains active at low forward speed |
 | Angular Velocity vs Time | `angular_vel(1)` in deg/s | Pitch rate $q$ |
 | Angular Acceleration vs Time | finite-difference of angular velocity (impact sample dropped, same reason) | $\dot q$ |
 | Forces vs Time | `fx, fy, fz` — net world-frame force | `fz` (thrust − drag − gravity) dominates; `fx` tracks `T·sinθ`; `fy` tracks `T·sinψ·sinθ` — real but noticeably smaller than `fx` for equal tilt/yaw angles (see [the sine-product note](#yaws-y-component-is-suppressed-relative-to-x-not-equal-to-it)), and exactly 0 if `init_yaw` is 0 |

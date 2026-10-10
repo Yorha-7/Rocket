@@ -50,20 +50,11 @@ double RocketKinematics::computeYawAeroMoment(const RocketState& state,
     return -0.5 * rho * v * v * Cn_alpha * beta_limited * A * d;
 }
 
-// ##### computeYawDampingTorque() #####
-// Goal: resist whatever yaw rotation is happening, proportional to how
-// fast it's spinning -- same weathervane damping as pitch, mirrored.
+// Body and fin crossflow moments oppose rotation even at zero forward speed.
 double RocketKinematics::computeYawDampingTorque(const RocketState& state,
-                                                 const MassProperties& mp) const {
-    double altitude = std::max(0.0, state.position(2));
-    double rho = aero_.getDensity(altitude);
-
-    double d = (mp.cp_location_cm - mp.cg_location_cm) / 100.0;
-    double A = params_.reference_area;
-
-    double c_damp = DAMPING_FACTOR * 0.5 * rho * state.velocity.norm() * d * d * A;
-
-    return -c_damp * state.angular_vel(2);
+                                              const MassProperties& mp) const {
+    const auto damping = computeRotationalDamping(state.angular_vel(2), state, mp);
+    return damping.body + damping.fin;
 }
 
 double RocketKinematics::computeTotalYawTorque(const RocketState& state,
@@ -111,6 +102,9 @@ YawTorques RocketKinematics::computeYawTorques(const RocketState& state) const {
     YawTorques torques{};
     torques.gravity = computeYawGravityTorque(state, mp);
     torques.aerodynamic = computeYawAeroMoment(state, mp);
-    torques.damping = computeYawDampingTorque(state, mp);
+    const auto damping = computeRotationalDamping(state.angular_vel(2), state, mp);
+    torques.damping_body = damping.body;
+    torques.damping_fin = damping.fin;
+    torques.damping = damping.body + damping.fin;
     return torques;
 }

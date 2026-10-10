@@ -23,6 +23,8 @@ public:
     // Geometry-only in the subsonic regime -- doesn't need a
     // FlightConditions, so it's computed once and cached by the caller.
     double computeCenterOfPressure() const;
+    double computeFinCnAlpha(double mach) const; // fin-set normal-force slope
+    double computeFinCp() const; // cm from nose tip, also used by fin damping
 
     // Goal: expose the shared atmosphere model so the rest of the sim
     // (translation, pitch/yaw dynamics) reads the SAME air density and
@@ -88,9 +90,7 @@ private:
 
     // ##### Fins #####
     double computeFinCd(const FlightConditions& fc) const;
-    double computeFinCnAlpha(double mach) const;
     double computeFinCmAlpha(double cn_alpha_fin) const;
-    double computeFinCp() const;
     double computeBodyFinInterference() const;
 
     // ##### Drag beyond body/fin form drag #####
