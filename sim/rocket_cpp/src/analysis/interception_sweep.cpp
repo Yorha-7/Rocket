@@ -1,4 +1,6 @@
+#include "project_settings.hpp"
 #include "cli_args.hpp"
+#include "analysis/interception_sweep.hpp"
 #include "gnc/navigation.hpp"
 #include "ork/ork_loader.hpp"
 #include "sim/rocket_kinematics.hpp"
@@ -17,23 +19,7 @@
 
 namespace {
 
-constexpr double PI = 3.14159265358979323846;
-constexpr double DEFAULT_RADIUS_M = 500.0;
-constexpr int DEFAULT_SHELLS = 16;
-constexpr int DEFAULT_DIRECTIONS = 96;
-constexpr double MIN_TARGET_ALTITUDE_M = 10.0;
-
-struct SweepOptions {
-    double radius_m = DEFAULT_RADIUS_M;
-    int shells = DEFAULT_SHELLS;
-    int directions = DEFAULT_DIRECTIONS;
-    double init_tilt_deg = 0.0;
-    double init_yaw_deg = 10.0;
-    bool preview = true;
-    bool terminal = false;
-    bool output_explicit = false;
-    std::string output_path;
-};
+using namespace interception;
 
 struct ClosestApproach {
     double distance_m = std::numeric_limits<double>::infinity();
@@ -80,7 +66,7 @@ int parseInt(const std::string& value, const char* option) {
 
 SweepOptions parseOptions(int argc, char** argv, const std::string& project_root) {
     SweepOptions options;
-    options.output_path = project_root + "/results/csv/interception_results_baseline.csv";
+    options.output_path = project_root + project_paths::SWEEP_BASELINE_CSV;
 
     for (int i = 1; i < argc; ++i) {
         const std::string flag = argv[i];
@@ -115,11 +101,13 @@ SweepOptions parseOptions(int argc, char** argv, const std::string& project_root
         } else if (flag == "--help" || flag == "-h") {
             std::cout
                 << "Usage: interception_sweep [options]\n"
-                << "  --radius R       sphere radius in metres (default 500)\n"
-                << "  --shells N       radial shells (default 16)\n"
-                << "  --directions N   upper-hemisphere directions per shell (default 96)\n"
-                << "  --preview        dt=0.004, 60 s cap (default)\n"
-                << "  --full           dt=0.001, 300 s cap\n"
+                << "  --radius R       sphere radius in metres (default " << DEFAULT_RADIUS_M << ")\n"
+                << "  --shells N       radial shells (default " << DEFAULT_SHELLS << ")\n"
+                << "  --directions N   upper-hemisphere directions per shell (default " << DEFAULT_DIRECTIONS << ")\n"
+                << "  --preview        dt=" << simulation_settings::PREVIEW_DT_S << ", "
+                << simulation_settings::PREVIEW_DURATION_S << " s cap (default)\n"
+                << "  --full           dt=" << simulation_settings::FULL_DT_S << ", "
+                << simulation_settings::FULL_DURATION_S << " s cap\n"
                 << "  --terminal       use target-relative terminal interception guidance\n"
                 << "  --baseline       use the existing waypoint/PID guidance (default)\n"
                 << "  --init-tilt D    initial pitch tilt in degrees\n"
@@ -132,9 +120,8 @@ SweepOptions parseOptions(int argc, char** argv, const std::string& project_root
     }
 
     if (!options.output_explicit) {
-        options.output_path = project_root + "/results/csv/" +
-            (options.terminal ? "interception_results_terminal.csv"
-                              : "interception_results_baseline.csv");
+        options.output_path = project_root + (options.terminal ? project_paths::SWEEP_TERMINAL_CSV
+                                                       : project_paths::SWEEP_BASELINE_CSV);
     }
     if (!(options.radius_m > 0.0) || options.shells < 1 || options.directions < 4) {
         throw std::invalid_argument("radius must be positive, shells >= 1, directions >= 4");
@@ -147,7 +134,7 @@ std::vector<Eigen::Vector3d> buildTargets(const SweepOptions& options) {
     // Include a near-vertical reference target. The exact sphere centre is
     // on the pad and is intentionally not used because Navigation rejects
     // targets at or below its 10 m ground-safety floor.
-    targets.emplace_back(0.0, 0.0, MIN_TARGET_ALTITUDE_M + 10.0);
+    targets.emplace_back(0.0, 0.0, MIN_TARGET_ALTITUDE_M + REFERENCE_TARGET_CLEARANCE_M);
 
     // Fibonacci directions give repeatable, approximately uniform coverage
     // of the physically valid upper hemisphere without polar clustering.
@@ -181,7 +168,7 @@ ClosestApproach findClosestApproach(const std::vector<RocketState>& states,
         const Eigen::Vector3d segment = states[i].position - states[i - 1].position;
         const double segment_squared = segment.squaredNorm();
         double fraction = 0.0;
-        if (segment_squared > 1e-18) {
+        if (segment_squared > MIN_SEGMENT_SQUARED_M2) {
             fraction = ((target - states[i - 1].position).dot(segment)) / segment_squared;
             fraction = std::clamp(fraction, 0.0, 1.0);
         }
@@ -199,15 +186,17 @@ ClosestApproach findClosestApproach(const std::vector<RocketState>& states,
 SweepResult runTarget(const OrkRocket& rocket, const SweepOptions& options,
                       const Eigen::Vector3d& target) {
     SimulationConfig config{};
-    config.dt = options.preview ? 0.004 : 0.001;
-    config.sim_duration = options.preview ? 60.0 : 300.0;
+    config.dt = options.preview ? simulation_settings::PREVIEW_DT_S : simulation_settings::FULL_DT_S;
+    config.sim_duration = options.preview ? simulation_settings::PREVIEW_DURATION_S : simulation_settings::FULL_DURATION_S;
     config.launch_height = rocket.launch_conditions.launch_height;
     config.init_tilt = options.init_tilt_deg;
     config.init_yaw = options.init_yaw_deg;
 
     RocketKinematics simulator(rocket.params, config, rocket.mass_components);
     navigation::Navigation navigation(target, config.dt,
-                                       2.7176, 1.8196, 0.0745,
+                                       navigation::NavigationStep::DEFAULT_KP,
+                                       navigation::NavigationStep::DEFAULT_KI,
+                                       navigation::NavigationStep::DEFAULT_KD,
                                        options.terminal);
     const std::vector<RocketState> states =
         simulator.simulate(config.sim_duration, rocket.flight_data, {}, &navigation);
@@ -243,7 +232,7 @@ void writeHeader(std::ofstream& output) {
 }
 
 void writeResult(std::ofstream& output, const SweepResult& result) {
-    output << std::fixed << std::setprecision(6)
+    output << std::fixed << std::setprecision(simulation_settings::CSV_PRECISION)
            << result.target.x() << ',' << result.target.y() << ',' << result.target.z() << ','
            << result.target_radius_m << ',' << result.closest.distance_m << ','
            << result.closest.time_s << ',' << result.closest.position.x() << ','
@@ -262,8 +251,8 @@ int main(int argc, char** argv) {
     try {
         const std::string project_root = findProjectRoot();
         const SweepOptions options = parseOptions(argc, argv, project_root);
-        const std::string ork_path = project_root + "/../data/rocket.ork";
-        const double dt = options.preview ? 0.004 : 0.001;
+        const std::string ork_path = project_root + project_paths::ROCKET_DESIGN;
+        const double dt = options.preview ? simulation_settings::PREVIEW_DT_S : simulation_settings::FULL_DT_S;
 
         std::cout << "Loading rocket design from " << ork_path << "...\n";
         const OrkRocket rocket = loadOrkRocket(ork_path, dt);
@@ -297,11 +286,11 @@ int main(int argc, char** argv) {
             writeResult(output, result);
             errors.push_back(result.closest.distance_m);
             max_error = std::max(max_error, result.closest.distance_m);
-            if (result.closest.distance_m <= 5.0) ++successes_5m;
-            if (result.closest.distance_m <= 10.0) ++successes_10m;
-            if (result.closest.distance_m <= 25.0) ++successes_25m;
+            if (result.closest.distance_m <= SUCCESS_NEAR_M) ++successes_5m;
+            if (result.closest.distance_m <= SUCCESS_MEDIUM_M) ++successes_10m;
+            if (result.closest.distance_m <= SUCCESS_FAR_M) ++successes_25m;
 
-            if ((i + 1) % 25 == 0 || i + 1 == targets.size()) {
+            if ((i + 1) % PROGRESS_INTERVAL == 0 || i + 1 == targets.size()) {
                 std::cout << "  completed " << (i + 1) << '/' << targets.size() << '\n';
             }
         }
@@ -315,9 +304,9 @@ int main(int argc, char** argv) {
                   << "Minimum miss: " << (errors.empty() ? 0.0 : errors.front()) << " m\n"
                   << "Median miss: " << median << " m\n"
                   << "Maximum miss: " << max_error << " m\n"
-                  << "Within 5 m: " << successes_5m << '/' << targets.size() << '\n'
-                  << "Within 10 m: " << successes_10m << '/' << targets.size() << '\n'
-                  << "Within 25 m: " << successes_25m << '/' << targets.size() << '\n';
+                  << "Within " << SUCCESS_NEAR_M << " m: " << successes_5m << '/' << targets.size() << '\n'
+                  << "Within " << SUCCESS_MEDIUM_M << " m: " << successes_10m << '/' << targets.size() << '\n'
+                  << "Within " << SUCCESS_FAR_M << " m: " << successes_25m << '/' << targets.size() << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';

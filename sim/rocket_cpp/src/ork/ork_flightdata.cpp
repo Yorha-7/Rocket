@@ -188,7 +188,7 @@ FlightData parseOrkFlightData(const std::string& xml, double dt,
     // artifacts).
     double dry_mass = raw_mass_g.back();
     for (int i = (int)raw_thrust.size() - 1; i >= 0; --i) {
-        if (raw_thrust[i] > 0.001) {
+        if (raw_thrust[i] > ork_flight_settings::BURNOUT_THRUST_THRESHOLD_N) {
             dry_mass = raw_mass_g[i];
             break;
         }

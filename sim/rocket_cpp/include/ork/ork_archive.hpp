@@ -2,6 +2,11 @@
 
 #include <string>
 
+namespace ork_archive_settings {
+// XML member inside the ZIP; independent of the outer design filename.
+inline constexpr char XML_ENTRY[] = "rocket.ork";
+}
+
 // ##### readOrkXml() #####
 // Goal: an .ork file is really a zip archive containing one XML document
 // (always named "rocket.ork" inside the zip, alongside any decal

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gnc/sensors.hpp"
+#include "gnc/thrust_vector_control.hpp"
 #include <Eigen/Dense>
 #include <cmath>
 #include <vector>
@@ -48,12 +49,17 @@ namespace navigation {
 // low-altitude waypoint (see navigation.cpp).
 class NavigationStep {
 public:
+    static constexpr double DEFAULT_KP = 2.7176;
+    static constexpr double DEFAULT_KI = 1.8196;
+    static constexpr double DEFAULT_KD = 0.0745;
+
     // Goal: fix the current aim point and gains, and size the
     // position-estimator gains once up front from the sim's own dt (see
     // estimatePosition()). Gains default to this project's own GA-tuned
     // values (src/tuning/); a caller can still override them.
     NavigationStep(const Eigen::Vector3d& target_position, double dt,
-                   double kp = 2.7176, double ki = 1.8196, double kd = 0.0745,
+                   double kp = NavigationStep::DEFAULT_KP,
+                   double ki = NavigationStep::DEFAULT_KI, double kd = NavigationStep::DEFAULT_KD,
                    bool terminal_interception = false);
 
     // Goal: retarget this controller -- Navigation calls this when it
@@ -75,6 +81,13 @@ public:
     Eigen::Vector3d lastEstimatedPosition() const { return fused_position_; }
 
 private:
+    static constexpr double TARGET_DISTANCE_EPSILON_M = 1e-6;
+    static constexpr double DIRECTION_COSINE_EPSILON = 1e-6;
+    static constexpr double FORCE_EPSILON_MPS2 = 1e-9;
+    static constexpr double INTEGRAL_GAIN_EPSILON = 1e-9;
+    static constexpr double MAX_TERMINAL_SPEED_MPS = 120.0;
+    static constexpr double BRAKING_ACCEL_MPS2 = 30.0;
+    static constexpr double VELOCITY_GAIN_PER_S = 1.5;
     static constexpr double ACTIVATION_ALTITUDE_M = 2.0;   // vehicle altitude before guidance activates
 
     // ##### PID gains #####
@@ -97,10 +110,8 @@ private:
 
     // Goal: cap how much the integral term alone can contribute, so a
     // long saturated stretch can't build more windup than one actuator
-    // swing is worth. Mirrors ThrustVectorControl::MAX_GIMBAL_DEG as its
-    // own constant (kept decoupled rather than shared, same pattern
-    // sensors.cpp uses for its own ISA formula copy).
-    static constexpr double MAX_GIMBAL_RAD = 30.0 * M_PI / 180.0;
+    // swing is worth. Uses the actuator's public physical travel limit.
+    static constexpr double MAX_GIMBAL_RAD = ThrustVectorControl::MAX_GIMBAL_DEG * M_PI / 180.0;
 
     // ##### Position estimator (alpha-beta / g-h filter) #####
     // Goal: track position+velocity, predicting each step from the
@@ -113,7 +124,7 @@ private:
     // between them.
     static constexpr double GPS_HORIZONTAL_SIGMA_M = 2.5;
     static constexpr double GPS_VERTICAL_SIGMA_M = 2.5 * 1.7;
-    static constexpr double ACCEL_NOISE_STD_MPS2 = 0.008 * 9.80665;
+    static constexpr double ACCEL_NOISE_STD_MPS2 = 0.008 * physical_constants::GRAVITY_MPS2;
 
     static void computeAlphaBeta(double sigma_process, double sigma_meas, double dt,
                                   double& alpha, double& beta);
@@ -150,6 +161,8 @@ private:
 // today's planner always optimizes for shortest distance (a line).
 class Navigation {
 public:
+    static constexpr double MIN_TARGET_ALTITUDE_M = 10.0;  // shared target floor, m
+
     // Goal: fix the real target for the whole flight (validated here --
     // see NavigationStep's class comment for why the ground check lives
     // here and not there), lay out the waypoint list, and construct the
@@ -157,13 +170,15 @@ public:
     // NavigationStep unchanged; a caller that omits them gets today's
     // tuned defaults.
     Navigation(const Eigen::Vector3d& final_target, double dt,
-               double kp = 2.7176, double ki = 1.8196, double kd = 0.0745,
+               double kp = NavigationStep::DEFAULT_KP,
+               double ki = NavigationStep::DEFAULT_KI, double kd = NavigationStep::DEFAULT_KD,
                bool terminal_interception = false);
 
     // Convenience overload for callers that keep coordinates as separate
     // values. The implementation converts them to Eigen internally.
     Navigation(double target_x, double target_y, double target_z, double dt,
-               double kp = 2.7176, double ki = 1.8196, double kd = 0.0745,
+               double kp = NavigationStep::DEFAULT_KP,
+               double ki = NavigationStep::DEFAULT_KI, double kd = NavigationStep::DEFAULT_KD,
                bool terminal_interception = false);
 
     // Goal: the one call site RocketKinematics::simulate() uses --
@@ -181,7 +196,6 @@ public:
     size_t currentWaypointIndex() const { return current_waypoint_idx_; }
 
 private:
-    static constexpr double MIN_TARGET_ALTITUDE_M = 10.0;   // ground-safety floor, meters
     static constexpr double WAYPOINT_STEP_M = 50.0;         // straight-line spacing between waypoints
     // "close enough, advance" radius. A miss here isn't fatal -- see the
     // path-direction fallback in computeTvcTarget() -- but a bigger

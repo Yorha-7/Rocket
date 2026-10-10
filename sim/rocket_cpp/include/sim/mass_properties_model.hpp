@@ -33,6 +33,8 @@ public:
     double dryCgCm() const { return dry_cg_cm_; }
 
 private:
+    static constexpr double MIN_MASS_KG = 1e-9;
+    static constexpr double kMotorRadiusFallback_m = 0.009;
     double dry_mass_kg_;
     double dry_cg_cm_;
     double dry_I_yy_;        // about dry_cg_cm_

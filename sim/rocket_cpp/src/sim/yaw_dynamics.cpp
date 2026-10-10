@@ -34,7 +34,7 @@ double RocketKinematics::computeYawGravityTorque(const RocketState& state,
 double RocketKinematics::computeYawAeroMoment(const RocketState& state,
                                               const MassProperties& mp) const {
     double v = state.velocity.norm();
-    if (v < 1e-6) return 0.0;
+    if (v < MIN_AIRSPEED_MPS) return 0.0;
 
     double altitude = std::max(0.0, state.position(2));
     double rho = aero_.getDensity(altitude);
@@ -45,7 +45,7 @@ double RocketKinematics::computeYawAeroMoment(const RocketState& state,
     FlightConditions fc = buildFlightConditions(state);
     double Cn_alpha = aero_.computeCoefficients(fc).Cn_alpha;
 
-    double beta_limited = std::max(-0.5, std::min(0.5, fc.beta));
+    double beta_limited = std::max(-MAX_AERO_ANGLE_RAD, std::min(MAX_AERO_ANGLE_RAD, fc.beta));
 
     return -0.5 * rho * v * v * Cn_alpha * beta_limited * A * d;
 }
@@ -61,7 +61,7 @@ double RocketKinematics::computeYawDampingTorque(const RocketState& state,
     double d = (mp.cp_location_cm - mp.cg_location_cm) / 100.0;
     double A = params_.reference_area;
 
-    double c_damp = 0.6 * 0.5 * rho * state.velocity.norm() * d * d * A;
+    double c_damp = DAMPING_FACTOR * 0.5 * rho * state.velocity.norm() * d * d * A;
 
     return -c_damp * state.angular_vel(2);
 }
@@ -78,7 +78,6 @@ double RocketKinematics::computeTotalYawTorque(const RocketState& state,
 double RocketKinematics::computeYawAcceleration(double total_torque,
                                                 const MassProperties& mp) const {
     double alpha = total_torque / mp.I_zz;
-    const double MAX_ALPHA = 100.0;  // rad/s^2, same safety clamp as pitch
     return std::max(-MAX_ALPHA, std::min(MAX_ALPHA, alpha));
 }
 
@@ -97,7 +96,6 @@ void RocketKinematics::updateYawDynamics(RocketState& next, const RocketState& s
 
     next.angular_vel(2) = state.angular_vel(2) + alpha * config_.dt;
 
-    const double MAX_ANGULAR_VEL = 10.0;  // rad/s
     next.angular_vel(2) = std::max(-MAX_ANGULAR_VEL, std::min(MAX_ANGULAR_VEL, next.angular_vel(2)));
 
     next.orientation(2) = fmod(state.orientation(2) + next.angular_vel(2) * config_.dt, 2 * M_PI);

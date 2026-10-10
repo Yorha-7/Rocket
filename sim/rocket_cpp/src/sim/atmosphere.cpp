@@ -45,7 +45,7 @@ double AerodynamicsModel::getViscosity(double altitude) const {
 }
 
 double AerodynamicsModel::getSpecificHeatRatio(double /*altitude*/) const {
-    return 1.4;  // air, essentially constant across this flight envelope
+    return AIR_HEAT_RATIO;  // air, essentially constant across this flight envelope
 }
 
 double AerodynamicsModel::getSpeedOfSound(double altitude) const {
@@ -64,8 +64,8 @@ double AerodynamicsModel::computeReynolds(double velocity, double altitude, doub
 // dominate the boundary layer -- below it, treat the surface as
 // effectively smooth instead.
 double AerodynamicsModel::computeTransitionReynolds(double roughness, double length) const {
-    if (roughness <= 0.0) return 1e30;  // effectively "never" -- perfectly smooth surface
-    return 51.0 * std::pow(roughness / length, -1.039);
+    if (roughness <= 0.0) return SMOOTH_TRANSITION_REYNOLDS;  // effectively "never" -- perfectly smooth surface
+    return ROUGH_TRANSITION_FACTOR * std::pow(roughness / length, ROUGH_TRANSITION_EXPONENT);
 }
 
 // Goal: flat-plate skin friction coefficient -- laminar (Blasius) below
@@ -75,12 +75,15 @@ double AerodynamicsModel::computeTransitionReynolds(double roughness, double len
 double AerodynamicsModel::computeSkinFrictionCf(double Re, double roughness, double length) const {
     if (Re <= 0.0) return 0.0;
 
-    double Cf_smooth = (Re < 1.0e4) ? 1.328 / std::sqrt(Re) : 0.074 / std::pow(Re, 0.2);
+    double Cf_smooth = (Re < LAMINAR_REYNOLDS_LIMIT)
+        ? LAMINAR_FRICTION_FACTOR / std::sqrt(Re)
+        : TURBULENT_FRICTION_FACTOR / std::pow(Re, TURBULENT_FRICTION_EXPONENT);
 
     double Re_crit = computeTransitionReynolds(roughness, length);
     if (Re <= Re_crit) return Cf_smooth;
 
-    double Cf_rough = std::pow(1.89 + 1.62 * std::log10(length / roughness), -2.5);
+    double Cf_rough = std::pow(ROUGH_FRICTION_OFFSET + ROUGH_FRICTION_LOG_FACTOR *
+                               std::log10(length / roughness), ROUGH_FRICTION_EXPONENT);
     return std::max(Cf_smooth, Cf_rough);
 }
 
@@ -110,7 +113,7 @@ double AerodynamicsModel::computeFrictionDrag(const FlightConditions& fc) const 
     double Cf = computeSkinFrictionCf(Re, params_.surface_roughness, length);
 
     double fineness = length / params_.body_diameter;
-    double form_factor = 1.0 + 0.5 / fineness;
+    double form_factor = 1.0 + FINENESS_CORRECTION / fineness;
 
     return Cf * form_factor * computeWettedArea() / params_.reference_area;
 }

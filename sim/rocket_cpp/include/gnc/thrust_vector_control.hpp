@@ -17,6 +17,8 @@
 // currentNozzleDirection() read out where they really are right now.
 class ThrustVectorControl {
 public:
+    static constexpr double MAX_GIMBAL_DEG = 30.0;  // physical travel limit, each axis
+
     ThrustVectorControl();
 
     // Goal: aim so the FORCE on the vehicle ends up along
@@ -60,8 +62,8 @@ public:
     static Eigen::Vector3d nozzleDirectionFromAngles(double gimbal_pitch_rad, double gimbal_yaw_rad);
 
 private:
-    // ---- Tuned here directly -- no config file for now ----
-    static constexpr double MAX_GIMBAL_DEG = 30.0;  // physical travel limit, each axis
+    static constexpr double DIRECTION_NORM_EPSILON = 1e-9;
+    static constexpr double DIRECTION_COSINE_EPSILON = 1e-6;
     // A first-order lag settles (~99%) after about 5*tau, so 0.05s here
     // lands the actuator on target inside the 250ms requirement (~99% by
     // 5*0.05=0.25s, ~95% already by 3*0.05=0.15s).

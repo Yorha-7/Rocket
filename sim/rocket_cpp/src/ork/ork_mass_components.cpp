@@ -117,7 +117,7 @@ std::vector<MassComponent> parseOrkMassComponents(const std::string& xml) {
     // ##### Body tube: annulus #####
     double body_start_cm = nose_len_m * 100.0;
     double body_len_m = childDouble(bodytube, "length");
-    double body_r_out_m = 0.0125;  // fallback; overwritten below from the "auto r" radius text
+    double body_r_out_m = ork_mass_settings::BODY_RADIUS_FALLBACK_M;  // fallback; overwritten below from the "auto r" radius text
     {
         const XMLElement* r_elem = bodytube->FirstChildElement("radius");
         if (r_elem && r_elem->GetText()) {

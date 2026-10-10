@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/rocket_types.hpp"
+#include "sim/physical_constants.hpp"
 
 // ##### AerodynamicsModel #####
 // Goal: work out every drag/turning-force coefficient, and the center of
@@ -31,6 +32,49 @@ public:
     double getSpeedOfSound(double altitude) const;
 
 private:
+    // Goal: one shared, fixed set of standard-atmosphere constants,
+    // baked in at compile time (static constexpr) instead of re-typed
+    // per method.
+    static constexpr double R_GAS = physical_constants::AIR_GAS_CONSTANT;  // J/(kg*K)
+    static constexpr double G0 = physical_constants::GRAVITY_MPS2;
+    static constexpr double T0 = physical_constants::SEA_LEVEL_TEMPERATURE_K;
+    static constexpr double P0 = physical_constants::SEA_LEVEL_PRESSURE_PA;
+    static constexpr double RHO0 = 1.225;
+    static constexpr double LAPSE_RATE = physical_constants::TEMPERATURE_LAPSE_RATE;
+    static constexpr double TROPOPAUSE_ALT = 11000.0;
+    static constexpr double TROPOPAUSE_TEMP = 216.65;
+    static constexpr double SUTHERLAND_CONST = 110.4;
+    static constexpr double MU0 = 1.7894e-5;
+    static constexpr double T0_SUTH = 273.15;
+
+    // Empirical coefficients and approximation limits.
+    static constexpr double MIN_BETA_SQUARED = 0.01;
+    static constexpr double MAX_COMPRESSIBILITY = 10.0;
+    static constexpr double CONICAL_CP_FRACTION = 0.666;
+    static constexpr double ELLIPSOID_CP_FRACTION = 0.5;
+    static constexpr double PARABOLIC_CP_FRACTION = 0.5;
+    static constexpr double OGIVE_CP_FRACTION = 0.466;
+    static constexpr double SUBSONIC_MACH_LIMIT = 0.8;
+    static constexpr double TRANSONIC_MACH_LIMIT = 1.2;
+    static constexpr double TRANSONIC_BODY_CD = 0.1;
+    static constexpr double SUPERSONIC_BODY_CD = 0.2;
+    static constexpr double BASE_CD_OFFSET = 0.12;
+    static constexpr double BASE_CD_MACH_FACTOR = 0.13;
+    static constexpr double WAVE_DRAG_MACH_LIMIT = 1.0;
+    static constexpr double WAVE_CD = 0.2;
+    static constexpr double MIN_CN_ALPHA = 1e-9;
+    static constexpr double AIR_HEAT_RATIO = 1.4;
+    static constexpr double SMOOTH_TRANSITION_REYNOLDS = 1e30;
+    static constexpr double ROUGH_TRANSITION_FACTOR = 51.0;
+    static constexpr double ROUGH_TRANSITION_EXPONENT = -1.039;
+    static constexpr double LAMINAR_REYNOLDS_LIMIT = 1.0e4;
+    static constexpr double LAMINAR_FRICTION_FACTOR = 1.328;
+    static constexpr double TURBULENT_FRICTION_FACTOR = 0.074;
+    static constexpr double TURBULENT_FRICTION_EXPONENT = 0.2;
+    static constexpr double ROUGH_FRICTION_OFFSET = 1.89;
+    static constexpr double ROUGH_FRICTION_LOG_FACTOR = 1.62;
+    static constexpr double ROUGH_FRICTION_EXPONENT = -2.5;
+    static constexpr double FINENESS_CORRECTION = 0.5;
     const RocketParams& params_;  // reference, not a copy -- caller must outlive this object
 
     // ##### Body #####
@@ -65,18 +109,4 @@ private:
     double computeSkinFrictionCf(double Re, double roughness, double length) const;
     double computeTransitionReynolds(double roughness, double length) const;
 
-    // Goal: one shared, fixed set of standard-atmosphere constants,
-    // baked in at compile time (static constexpr) instead of re-typed
-    // per method.
-    static constexpr double R_GAS = 287.058;  // J/(kg*K)
-    static constexpr double G0 = 9.80665;
-    static constexpr double T0 = 288.15;
-    static constexpr double P0 = 101325.0;
-    static constexpr double RHO0 = 1.225;
-    static constexpr double LAPSE_RATE = -0.0065;
-    static constexpr double TROPOPAUSE_ALT = 11000.0;
-    static constexpr double TROPOPAUSE_TEMP = 216.65;
-    static constexpr double SUTHERLAND_CONST = 110.4;
-    static constexpr double MU0 = 1.7894e-5;
-    static constexpr double T0_SUTH = 273.15;
 };

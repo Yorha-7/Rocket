@@ -35,7 +35,7 @@ double RocketKinematics::computeGravityTorque(const RocketState& state,
 double RocketKinematics::computeAerodynamicMoment(const RocketState& state,
                                                   const MassProperties& mp) const {
     double v = state.velocity.norm();
-    if (v < 1e-6) return 0.0;
+    if (v < MIN_AIRSPEED_MPS) return 0.0;
 
     double altitude = std::max(0.0, state.position(2));
     double rho = aero_.getDensity(altitude);
@@ -46,7 +46,7 @@ double RocketKinematics::computeAerodynamicMoment(const RocketState& state,
     FlightConditions fc = buildFlightConditions(state);
     double Cn_alpha = aero_.computeCoefficients(fc).Cn_alpha;
 
-    double alpha_limited = std::max(-0.5, std::min(0.5, fc.alpha));
+    double alpha_limited = std::max(-MAX_AERO_ANGLE_RAD, std::min(MAX_AERO_ANGLE_RAD, fc.alpha));
 
     return -0.5 * rho * v * v * Cn_alpha * alpha_limited * A * d;
 }
@@ -66,7 +66,7 @@ double RocketKinematics::computeDampingTorque(const RocketState& state,
     double d = (mp.cp_location_cm - mp.cg_location_cm) / 100.0;
     double A = params_.reference_area;
 
-    double c_damp = 0.6 * 0.5 * rho * state.velocity.norm() * d * d * A;
+    double c_damp = DAMPING_FACTOR * 0.5 * rho * state.velocity.norm() * d * d * A;
 
     return -c_damp * state.angular_vel(1);
 }
@@ -88,7 +88,6 @@ double RocketKinematics::computeTotalPitchTorque(const RocketState& state,
 double RocketKinematics::computePitchAcceleration(double total_torque,
                                                   const MassProperties& mp) const {
     double alpha = total_torque / mp.I_yy;
-    const double MAX_ALPHA = 100.0;  // rad/s^2
     return std::max(-MAX_ALPHA, std::min(MAX_ALPHA, alpha));
 }
 
@@ -115,7 +114,6 @@ void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState&
 
     next.angular_vel(1) = state.angular_vel(1) + alpha * config_.dt;
 
-    const double MAX_ANGULAR_VEL = 10.0;  // rad/s
     next.angular_vel(1) = std::max(-MAX_ANGULAR_VEL, std::min(MAX_ANGULAR_VEL, next.angular_vel(1)));
 
     next.orientation(1) = fmod(state.orientation(1) + next.angular_vel(1) * config_.dt, 2 * M_PI);
@@ -124,9 +122,8 @@ void RocketKinematics::updatePitchDynamics(RocketState& next, const RocketState&
     // against the motor's real ~0.05s ramp-up per the .ork's own thrust
     // curve) -- not the whole flight. Past that window, pitch is free to
     // wrap like yaw always has.
-    const double IGNITION_TRANSIENT_S = 0.1;
     if (elapsed_time_s_ <= IGNITION_TRANSIENT_S) {
-        const double MAX_PITCH = 1.5;  // ~85 degrees
+
         next.orientation(1) = std::max(-MAX_PITCH, std::min(MAX_PITCH, next.orientation(1)));
     }
 }

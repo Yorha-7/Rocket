@@ -1,10 +1,6 @@
 #include "sim/mass_properties_model.hpp"
 #include <algorithm>
 
-namespace {
-constexpr double kMotorRadiusFallback_m = 0.009;
-}
-
 // ##### Constructor: fix the dry-structure numbers once #####
 // Goal: sum every structural component's mass into one total, find their
 // combined center of gravity (mass-weighted average position), and find
@@ -22,7 +18,7 @@ VehicleMassModel::VehicleMassModel(const std::vector<MassComponent>& components,
         dry_cg_cm_ += c.mass_kg * c.position_cm;
         if (c.name == "innertube") motor_position_cm_ = c.position_cm;
     }
-    if (dry_mass_kg_ > 1e-9) dry_cg_cm_ /= dry_mass_kg_;
+    if (dry_mass_kg_ > MIN_MASS_KG) dry_cg_cm_ /= dry_mass_kg_;
     if (motor_position_cm_ == 0.0) motor_position_cm_ = dry_cg_cm_;
 
     // Goal: parallel-axis theorem, treating each component as a point
@@ -48,7 +44,7 @@ MassProperties VehicleMassModel::computeAt(double total_mass_kg) const {
     double motor_mass_kg = std::max(0.0, total_mass_kg - dry_mass_kg_);
     double combined_mass_kg = dry_mass_kg_ + motor_mass_kg;
 
-    double combined_cg_cm = combined_mass_kg > 1e-9
+    double combined_cg_cm = combined_mass_kg > MIN_MASS_KG
         ? (dry_mass_kg_ * dry_cg_cm_ + motor_mass_kg * motor_position_cm_) / combined_mass_kg
         : dry_cg_cm_;
 

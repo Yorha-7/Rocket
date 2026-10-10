@@ -3,6 +3,10 @@
 #include "sim/rocket_types.hpp"
 #include <string>
 
+namespace ork_flight_settings {
+inline constexpr double BURNOUT_THRUST_THRESHOLD_N = 0.001;
+}
+
 // ##### parseOrkFlightData() #####
 // Goal: read one flight's motor THRUST CURVE out of an OpenRocket
 // design's own embedded simulation results, resampled onto a uniform dt

@@ -3,6 +3,10 @@
 #include <string>
 #include <vector>
 
+namespace ork_mass_settings {
+inline constexpr double BODY_RADIUS_FALLBACK_M = 0.0125;
+}
+
 // ##### MassComponent #####
 // Goal: hold one structural piece of the airframe -- its mass and where
 // its center of gravity sits, measured from the nose tip. This is the

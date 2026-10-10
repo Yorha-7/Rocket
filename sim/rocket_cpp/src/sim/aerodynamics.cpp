@@ -21,7 +21,7 @@ AerodynamicsModel::AerodynamicsModel(const RocketParams& params) : params_(param
 // shape or length.
 double AerodynamicsModel::computeBodyCnAlpha(double mach) const {
     double beta2 = 1.0 - mach * mach;
-    double compressibility = (beta2 > 0.01) ? 1.0 / std::sqrt(beta2) : 10.0;  // guard near Mach 1
+    double compressibility = (beta2 > MIN_BETA_SQUARED) ? 1.0 / std::sqrt(beta2) : MAX_COMPRESSIBILITY;  // guard near Mach 1
     return 2.0 * compressibility;
 }
 
@@ -37,17 +37,17 @@ double AerodynamicsModel::computeNoseCp() const {
     double L_cm = params_.nose_length * 100.0;
     double fraction;
     switch (params_.nose_shape) {
-        case 0: fraction = 0.666; break;   // conical
-        case 2: fraction = 0.5; break;     // hemisphere/ellipsoid
-        case 3: fraction = 0.5; break;     // parabolic
-        default: fraction = 0.466; break;  // ogive (tangent ogive)
+        case 0: fraction = CONICAL_CP_FRACTION; break;   // conical
+        case 2: fraction = ELLIPSOID_CP_FRACTION; break;     // hemisphere/ellipsoid
+        case 3: fraction = PARABOLIC_CP_FRACTION; break;     // parabolic
+        default: fraction = OGIVE_CP_FRACTION; break;  // ogive (tangent ogive)
     }
     return fraction * L_cm;
 }
 
 double AerodynamicsModel::computeBodyCd(const FlightConditions& fc) const {
-    if (fc.mach < 0.8) return computeBodyCdSubsonic(fc);
-    if (fc.mach < 1.2) return computeBodyCdTransonic(fc);
+    if (fc.mach < SUBSONIC_MACH_LIMIT) return computeBodyCdSubsonic(fc);
+    if (fc.mach < TRANSONIC_MACH_LIMIT) return computeBodyCdTransonic(fc);
     return computeBodyCdSupersonic(fc);
 }
 
@@ -63,11 +63,11 @@ double AerodynamicsModel::computeBodyCdSubsonic(const FlightConditions& /*fc*/) 
 // Mach ~0.28, so these paths never actually run. Rough order-of-
 // magnitude numbers, not tuned.
 double AerodynamicsModel::computeBodyCdTransonic(const FlightConditions& /*fc*/) const {
-    return 0.1;
+    return TRANSONIC_BODY_CD;
 }
 
 double AerodynamicsModel::computeBodyCdSupersonic(const FlightConditions& /*fc*/) const {
-    return 0.2;
+    return SUPERSONIC_BODY_CD;
 }
 
 // ##### Fins #####
@@ -91,7 +91,7 @@ double AerodynamicsModel::computeFinCnAlpha(double mach) const {
                             (1.0 + std::sqrt(1.0 + std::pow(2.0 * Lm / (Cr + Ct), 2.0)));
 
     double beta2 = 1.0 - mach * mach;
-    double compressibility = (beta2 > 0.01) ? 1.0 / std::sqrt(beta2) : 10.0;
+    double compressibility = (beta2 > MIN_BETA_SQUARED) ? 1.0 / std::sqrt(beta2) : MAX_COMPRESSIBILITY;
 
     return computeBodyFinInterference() * incompressible * compressibility;
 }
@@ -153,7 +153,7 @@ double AerodynamicsModel::computeFinCd(const FlightConditions& fc) const {
 double AerodynamicsModel::computeBaseDrag(const FlightConditions& fc) const {
     double base_r = params_.base_diameter / 2.0;
     double base_area = M_PI * base_r * base_r;
-    double coeff = 0.12 + 0.13 * fc.mach * fc.mach;
+    double coeff = BASE_CD_OFFSET + BASE_CD_MACH_FACTOR * fc.mach * fc.mach;
     return coeff * (base_area / params_.reference_area);
 }
 
@@ -170,7 +170,7 @@ double AerodynamicsModel::computeBoatTailDrag(const FlightConditions& /*fc*/) co
 // Goal: placeholder, supersonic-only physics -- never exercised at this
 // vehicle's actual speeds.
 double AerodynamicsModel::computeWaveDrag(const FlightConditions& fc) const {
-    return (fc.mach > 1.0) ? 0.2 : 0.0;
+    return (fc.mach > WAVE_DRAG_MACH_LIMIT) ? WAVE_CD : 0.0;
 }
 
 // ##### Assembly #####
@@ -212,6 +212,6 @@ double AerodynamicsModel::computeCenterOfPressure() const {
     double cn_body = computeBodyCnAlpha(0.0);
     double cn_fin = computeFinCnAlpha(0.0);
     double total = cn_body + cn_fin;
-    if (total < 1e-9) return computeNoseCp();
+    if (total < MIN_CN_ALPHA) return computeNoseCp();
     return (cn_body * computeNoseCp() + cn_fin * computeFinCp()) / total;
 }

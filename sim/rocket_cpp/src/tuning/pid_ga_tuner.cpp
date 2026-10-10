@@ -5,20 +5,6 @@
 
 namespace tuning {
 
-namespace {
-// ---- Tuned here directly -- no config file for now ----
-constexpr double KP_MIN = 0.0, KP_MAX = 3.0, KP_BASELINE = 1.0;
-constexpr double KI_MIN = 0.0, KI_MAX = 2.0, KI_BASELINE = 0.6;
-constexpr double KD_MIN = 0.0, KD_MAX = 0.5, KD_BASELINE = 0.0;
-
-// Goal: a single fixed "local hop" target, close enough (magnitude <
-// this project's own Navigation::WAYPOINT_STEP_M, 50m) that Navigation
-// always collapses it to exactly one waypoint -- i.e. this evaluates
-// NavigationStep's own steering law directly, uncomplicated by the
-// path planner ever advancing mid-flight.
-const Eigen::Vector3d LOCAL_HOP_TARGET(0, 20, 45);
-constexpr double LOCAL_HOP_DURATION_S = 30.0;  // generous -- ground termination ends a real flight sooner
-}  // namespace
 
 ParamSpec specFor(Param p) {
     switch (p) {
@@ -39,13 +25,13 @@ std::string paramName(Param p) {
 }
 
 double decode(Chromosome c, const ParamSpec& spec) {
-    return spec.min + (static_cast<double>(c) / 255.0) * (spec.max - spec.min);
+    return spec.min + (static_cast<double>(c) / static_cast<double>(GENE_MAX)) * (spec.max - spec.min);
 }
 
 Chromosome encode(double value, const ParamSpec& spec) {
     double clamped = std::max(spec.min, std::min(spec.max, value));
     double frac = (spec.max > spec.min) ? (clamped - spec.min) / (spec.max - spec.min) : 0.0;
-    return static_cast<Chromosome>(std::lround(frac * 255.0));
+    return static_cast<Chromosome>(std::lround(frac * static_cast<double>(GENE_MAX)));
 }
 
 double loadShared(const SharedGains& shared, Param p) {
@@ -85,7 +71,7 @@ double fitness(Param which, double value, const SharedGains& shared, const Rocke
     for (const auto& state : states) {
         closest = std::min(closest, (state.position - LOCAL_HOP_TARGET).norm());
     }
-    return 1.0 / (closest + 1.0);
+    return 1.0 / (closest + FITNESS_DISTANCE_OFFSET_M);
 }
 
 }  // namespace tuning
