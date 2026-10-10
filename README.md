@@ -279,8 +279,27 @@ over time, and the commanded vs. actual gimbal angle history:
 
 The eventual goal is for this to fly on real hardware, not just in
 simulation. `artifacts/` and `kiCAD/` hold the in-progress flight-computer
-PCB design — the board that would actually carry the IMU, altimeter, GPS,
-and gimbal actuator this simulation's `gnc/` layer is modeling:
+PCB design. The `feat/launcher` branch extends the STM32F103C8T6 board,
+which carries an MPU-9250 IMU and an MS5611 pressure sensor, with:
+
+- **microSD card slot** (`J5`, Molex 104031-0811) for onboard flight-data
+  storage.
+- **Buzzer** (`LS1`, PS1240P02CT3) for audible status and alerts.
+- **Two servo headers** (`J1` and `J4`) for the gimbal servos, with a
+  dedicated **TPS61033 boost regulator** supplying the servo power rail.
+- **Standard 10-pin SWD programming/debug connector** (`J2`, 2×5),
+  exposing SWDIO, SWCLK, SWO, and reset for the STM32.
+- **Battery terminal and USB-C charging input** (`J6` and `J3`), with a
+  **BQ24074 charger and power-path controller** for charging from a USB-C
+  adapter and supplying the board from the battery or external input.
+- **Status LEDs** for the charging/power circuitry, alongside the existing
+  USB-C interface, boot switch, and 3.3 V regulation.
+
+These are schematic and PCB additions; firmware support and bench/flight
+validation remain separate work. GPS is modeled in the simulator but is
+not fitted to this PCB revision. The KiCad project is
+[`kiCAD/schmatic/schmatic.kicad_pro`](./kiCAD/schmatic/schmatic.kicad_pro),
+with the schematic and board layout beside it.
 
 <img src="./artifacts/PCB_3D.png" alt="Flight computer PCB, 3D render" width="420">
 
